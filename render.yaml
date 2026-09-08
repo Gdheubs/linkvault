@@ -1,24 +1,21 @@
 # Render blueprint. Import this repo at dashboard.render.com/blueprints.
 #
-# NOTE: a persistent disk requires a paid instance type. On the free tier the
-# filesystem is wiped on every deploy, which for this app means losing every
-# account, link and balance. Do not run it there.
+# DEMO CONFIGURATION: this free-tier variant intentionally has no persistent
+# disk because Render requires billing details before provisioning a paid disk.
+# The app will boot, but the SQLite database is ephemeral: accounts, links,
+# balances and file metadata can be lost after a restart or redeploy. For a
+# real deployment, restore `plan: starter` and the disk block below.
 services:
   - type: web
     name: linkvault
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: starter
+    plan: free
     region: oregon
     healthCheckPath: /healthz
 
     # SQLite tolerates exactly one writer. Never scale this above 1.
     numInstances: 1
-
-    disk:
-      name: linkvault-data
-      mountPath: /app/data
-      sizeGB: 1
 
     envVars:
       - key: NODE_ENV
