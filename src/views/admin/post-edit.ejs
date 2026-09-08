@@ -1,0 +1,100 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <a href="/admin/content" class="badge mb-2" style="display:inline-flex">← Content</a>
+    <div class="page-head">
+      <div>
+        <h1><%= post ? 'Edit article' : 'New article' %></h1>
+        <p class="muted">Markdown body. Original, useful writing is what an ad-network review is looking for.</p>
+      </div>
+      <% if (post) { %>
+        <a href="/blog/<%= post.slug %>" target="_blank" rel="noopener" class="btn btn-sm btn-ghost">Preview ↗</a>
+      <% } %>
+    </div>
+
+    <form method="post" action="/admin/content/post" class="grid g-side">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <% if (post) { %><input type="hidden" name="id" value="<%= post.id %>"><% } %>
+
+      <div class="card">
+        <div class="form-grid">
+          <div class="field">
+            <label class="label">Title</label>
+            <input class="input" name="title" required maxlength="200" value="<%= post ? post.title : '' %>">
+          </div>
+          <div class="field">
+            <label class="label">Excerpt</label>
+            <input class="input" name="excerpt" maxlength="400" value="<%= post ? post.excerpt : '' %>"
+                   placeholder="One or two sentences — used on cards and as the meta description">
+          </div>
+          <div class="field">
+            <label class="label">Body (markdown)</label>
+            <textarea class="textarea code" name="body" required style="min-height:520px"><%= post ? post.body : '' %></textarea>
+            <span class="hint">
+              Supports <code class="mono"># headings</code>, <code class="mono">**bold**</code>,
+              <code class="mono">*italic*</code>, <code class="mono">[links](url)</code>, lists, blockquotes,
+              <code class="mono">```code blocks```</code> and <code class="mono">---</code> rules.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="stack gap-3">
+        <div class="card card-tight">
+          <div class="card-head"><span class="card-title">Publishing</span></div>
+          <div class="form-grid">
+            <div class="field">
+              <label class="label">Slug</label>
+              <input class="input mono" name="slug" maxlength="80" value="<%= post ? post.slug : '' %>" placeholder="auto from title">
+            </div>
+            <div class="field">
+              <label class="label">Status</label>
+              <select class="select" name="status">
+                <option value="published" <%= post && post.status === 'published' ? 'selected' : '' %>>published</option>
+                <option value="draft" <%= !post || post.status === 'draft' ? 'selected' : '' %>>draft</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="label">Tags (comma separated)</label>
+              <input class="input" name="tags" maxlength="200" value="<%= post ? post.tags : '' %>" placeholder="monetization, guides">
+            </div>
+            <div class="field">
+              <label class="label">Author</label>
+              <input class="input" name="author" maxlength="80" value="<%= post ? post.author : brand.name + ' Team' %>">
+            </div>
+            <div class="field">
+              <label class="label">Cover image URL</label>
+              <input class="input" name="cover" maxlength="500" value="<%= post ? post.cover : '' %>">
+            </div>
+            <button class="btn btn-primary btn-block">Save article</button>
+          </div>
+        </div>
+
+        <% if (post) { %>
+          <div class="card card-tight">
+            <div class="upper mb-2">Stats</div>
+            <dl class="kv">
+              <dt>Views</dt><dd><%= num(post.views) %></dd>
+              <dt>Read time</dt><dd><%= post.read_minutes %> min</dd>
+              <dt>Published</dt><dd><%= fmtDate(post.published_at) %></dd>
+              <dt>Updated</dt><dd><%= timeAgo(post.updated_at) %></dd>
+            </dl>
+          </div>
+        <% } %>
+
+        <div class="card card-tight" style="background:var(--surface-2)">
+          <div class="upper mb-2">Review checklist</div>
+          <ul class="feature-list">
+            <li>800+ words of original writing</li>
+            <li>Clear headings and structure</li>
+            <li>An excerpt that reads as a real description</li>
+            <li>Nothing scraped or spun</li>
+          </ul>
+        </div>
+      </aside>
+    </form>
+  </main>
+</div>
+<%- include('../partials/foot') %>

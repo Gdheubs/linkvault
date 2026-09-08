@@ -1,0 +1,282 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+
+<div class="app">
+  <%- include('../partials/side') %>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>Ad campaigns</h1>
+        <p class="muted">Promote your videos, posts and products across our link flow and article pages.</p>
+      </div>
+      <div class="row gap-2 wrapf">
+        <div class="rangebar">
+          <% [7, 30, 90].forEach(function (d) { %>
+            <a href="?days=<%= d %>" class="<%= days === d ? 'on' : '' %>"><%= d %>d</a>
+          <% }); %>
+        </div>
+        <button class="btn btn-primary" data-modal-open="newCampaign">+ New campaign</button>
+      </div>
+    </div>
+
+    <!-- ── account tiles ──────────────────────────────────────────────── -->
+    <div class="grid g4 mb-3">
+      <div class="card stat">
+        <div class="stat-label">Ad credit</div>
+        <div class="stat-value" style="color:<%= credit > 0 ? 'var(--ok)' : 'var(--text-3)' %>"><%= usd(credit) %></div>
+        <div class="stat-sub">available to spend</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Impressions</div>
+        <div class="stat-value"><%= num(totals.impressions) %></div>
+        <div class="stat-sub">last <%= days %> days</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Clicks</div>
+        <div class="stat-value"><%= num(totals.clicks) %></div>
+        <div class="stat-sub"><%= (totals.ctr * 100).toFixed(2) %>% CTR</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Total spent</div>
+        <div class="stat-value"><%= usd(spent) %></div>
+        <div class="stat-sub"><%= num(campaigns.length) %> campaign<%= campaigns.length === 1 ? '' : 's' %></div>
+      </div>
+    </div>
+
+    <% if (credit <= 0) { %>
+      <div class="alert alert-info mb-3">
+        <span class="alert-mark">ℹ</span>
+        <div>
+          <strong>You have no ad credit yet.</strong>
+          <p class="small mt-1">
+            You can still build a campaign — it saves as a <b>draft</b> and nothing is charged. To fund it, ask us to
+            top up your credit via <a href="/contact?kind=advertiser" style="color:var(--brand)">the contact form</a>.
+            We add credit manually once payment clears; this panel does not take card payments.
+          </p>
+        </div>
+      </div>
+    <% } %>
+
+    <!-- ── performance ────────────────────────────────────────────────── -->
+    <div class="card mb-3">
+      <div class="card-head">
+        <span class="card-title">Delivery across all campaigns</span>
+        <div class="row gap-3 xs muted">
+          <span class="row gap-1"><i class="legend-key" style="background:var(--brand)"></i> Impressions</span>
+          <span class="row gap-1"><i class="legend-key" style="background:var(--brand-3)"></i> Clicks</span>
+        </div>
+      </div>
+      <div class="chart-wrap" data-chart='<%- JSON.stringify({ type:"area", x:"label", y:"impressions", y2:"clicks", yLabel:"Impressions", y2Label:"Clicks", series }) %>'></div>
+    </div>
+
+    <!-- ── campaigns ──────────────────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-head"><span class="card-title">Your campaigns</span><span class="badge"><%= campaigns.length %></span></div>
+
+      <% if (!campaigns.length) { %>
+        <div class="empty">
+          <div class="empty-mark">◈</div>
+          No campaigns yet.
+          <p class="small mt-1">Promote a YouTube video, a blog post, or a product in front of our readers.</p>
+          <button class="btn btn-sm btn-primary mt-2" data-modal-open="newCampaign">Create your first campaign</button>
+        </div>
+      <% } else { %>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Campaign</th><th>Package</th><th class="num">Impr.</th><th class="num">Clicks</th>
+                <th class="num">CTR</th><th class="num">CPC</th><th>Runs</th><th>Status</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% campaigns.forEach(function (c) { %>
+                <tr>
+                  <td style="max-width:250px">
+                    <div class="row gap-1 mb-1">
+                      <span class="badge <%= c.kind === 'youtube' ? 'badge-danger' : 'badge-info' %>">
+                        <%= c.kind === 'youtube' ? '▶' : c.kind === 'product' ? '▣' : '✦' %> <%= c.kind %>
+                      </span>
+                    </div>
+                    <a href="/dashboard/ads/<%= c.id %>" style="font-weight:600"><%= truncate(c.title, 42) %></a>
+                    <% if (c.url) { %>
+                      <div class="xs muted truncate" style="max-width:230px"><%= hostOf(c.url) || c.url %></div>
+                    <% } %>
+                  </td>
+                  <td class="small">
+                    <span class="badge"><%= c.package %></span>
+                    <div class="xs muted mt-1"><%= usd(c.price_micros) %> · <%= c.days %>d</div>
+                  </td>
+                  <td class="num"><%= num(c.impressions) %></td>
+                  <td class="num"><%= num(c.clicks) %></td>
+                  <td class="num"><%= pct(c.clicks, c.impressions, 2) %></td>
+                  <td class="num"><%= c.clicks ? usd(Math.round(c.price_micros / c.clicks), 4) : '—' %></td>
+                  <td class="small muted">
+                    <% if (c.starts_at) { %>
+                      <%= fmtDate(c.starts_at) %>
+                      <div class="xs">to <%= c.ends_at ? fmtDate(c.ends_at) : '—' %></div>
+                    <% } else { %>not started<% } %>
+                  </td>
+                  <td>
+                    <span class="badge <%= c.status === 'active' ? 'badge-ok'
+                      : c.status === 'rejected' ? 'badge-danger'
+                      : c.status === 'draft' ? ''
+                      : c.status === 'expired' ? '' : 'badge-warn' %>"><%= c.status %></span>
+                    <% if (!c.paid && c.status !== 'rejected') { %>
+                      <div class="xs mt-1"><span class="badge badge-warn">unfunded</span></div>
+                    <% } %>
+                  </td>
+                  <td>
+                    <div class="stack gap-1">
+                      <a href="/dashboard/ads/<%= c.id %>" class="btn btn-xs btn-block">Analytics</a>
+                      <% if (!c.paid) { %>
+                        <form method="post" action="/dashboard/ads/<%= c.id %>/state">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <input type="hidden" name="state" value="fund">
+                          <button class="btn btn-xs btn-ok btn-block">Fund</button>
+                        </form>
+                      <% } else if (c.status === 'active') { %>
+                        <form method="post" action="/dashboard/ads/<%= c.id %>/state">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <input type="hidden" name="state" value="pause">
+                          <button class="btn btn-xs btn-block">Pause</button>
+                        </form>
+                      <% } else if (c.status === 'paused') { %>
+                        <form method="post" action="/dashboard/ads/<%= c.id %>/state">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <input type="hidden" name="state" value="resume">
+                          <button class="btn btn-xs btn-ok btn-block">Resume</button>
+                        </form>
+                      <% } %>
+                    </div>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- ── API pointer ────────────────────────────────────────────────── -->
+    <div class="card mt-3" style="background:var(--surface-2)">
+      <div class="card-head">
+        <span class="card-title">Run campaigns from the API</span>
+        <a href="/dashboard/api" class="btn btn-xs btn-ghost">Full reference</a>
+      </div>
+      <p class="small mb-2">Everything on this page is available programmatically with your existing API key.</p>
+      <div class="prose"><pre><code>curl -X POST "<%= baseUrl %>/api/v1/ads/campaigns" \
+  -H "Authorization: Bearer YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"kind":"youtube","package":"spotlight",
+       "title":"My new video","youtube_id":"https://youtu.be/…"}'
+
+curl -H "Authorization: Bearer YOUR_KEY" \
+  "<%= baseUrl %>/api/v1/ads/campaigns/12/stats?days=30"</code></pre></div>
+    </div>
+  </main>
+</div>
+
+<!-- ── create campaign ──────────────────────────────────────────────── -->
+<div class="modal-back" id="newCampaign">
+  <div class="modal" style="width:min(100%,640px)">
+    <div class="modal-head"><strong>New ad campaign</strong><button class="modal-close" data-modal-close>×</button></div>
+    <div class="modal-body">
+      <form method="post" action="/dashboard/ads" class="form-grid" id="campaignForm">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="form-grid two">
+          <div class="field">
+            <label class="label" for="c-kind">What are you promoting?</label>
+            <select class="select" id="c-kind" name="kind">
+              <option value="youtube">A YouTube video</option>
+              <option value="blog">A blog post or article</option>
+              <option value="product">A product or app</option>
+              <option value="link">Something else</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="label" for="c-package">Package</label>
+            <select class="select" id="c-package" name="package" required>
+              <% packages.forEach(function (pk) { %>
+                <option value="<%= pk.key %>" <%= pk.featured ? 'selected' : '' %>>
+                  <%= pk.name %> — $<%= pk.price %> / <%= pk.days %>d / <%= pk.placement %>
+                </option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="c-title">Headline</label>
+          <input class="input" id="c-title" name="title" required maxlength="140"
+                 placeholder="What readers will see on the card">
+        </div>
+
+        <div class="field">
+          <label class="label" for="c-blurb">One-line description</label>
+          <input class="input" id="c-blurb" name="blurb" maxlength="300"
+                 placeholder="Why should someone click through?">
+        </div>
+
+        <div class="field" id="c-ytField">
+          <label class="label" for="c-yt">YouTube URL or video ID</label>
+          <input class="input" id="c-yt" name="youtube_id" maxlength="200"
+                 placeholder="https://youtube.com/watch?v=…">
+          <span class="hint">The player embeds directly on the page via YouTube's privacy-enhanced domain.</span>
+        </div>
+
+        <div class="field">
+          <label class="label" for="c-url">Destination URL</label>
+          <input class="input" id="c-url" name="url" maxlength="500" placeholder="https://…">
+        </div>
+
+        <div class="form-grid two">
+          <div class="field">
+            <label class="label" for="c-image">Thumbnail URL <span class="muted">(optional)</span></label>
+            <input class="input" id="c-image" name="image" maxlength="500">
+          </div>
+          <div class="field">
+            <label class="label" for="c-cta">Button text <span class="muted">(optional)</span></label>
+            <input class="input" id="c-cta" name="cta" maxlength="40" placeholder="Watch now">
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="c-adv">Shown as <span class="muted">(your name or channel)</span></label>
+          <input class="input" id="c-adv" name="advertiser" maxlength="80" value="<%= me.name || '' %>">
+        </div>
+
+        <div class="alert alert-info">
+          <span class="alert-mark">ℹ</span>
+          <div class="small">
+            The fee is taken from your ad credit when you submit. If you don't have enough, the campaign saves as an
+            unfunded draft and nothing is charged. Every campaign is reviewed before it goes live, and a rejected
+            campaign is refunded in full.
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-lg">Create campaign</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var kind = document.getElementById('c-kind');
+    var yt = document.getElementById('c-ytField');
+    var url = document.getElementById('c-url');
+    if (!kind || !yt) return;
+    function sync() {
+      var isYt = kind.value === 'youtube';
+      yt.hidden = !isYt;
+      if (url) url.required = !isYt;
+    }
+    kind.addEventListener('change', sync);
+    sync();
+  })();
+</script>
+
+<%- include('../partials/foot') %>

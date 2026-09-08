@@ -1,0 +1,50 @@
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <a href="/" class="logo mb-2"><span class="logo-mark">LV</span><span><%= brand.name %></span></a>
+        <p class="small" style="max-width:34ch"><%= brand.tagline %>.</p>
+        <div class="row gap-2 mt-3">
+          <% if (brand.twitter) { %><a href="<%= brand.twitter %>" rel="noopener nofollow" target="_blank" class="badge">𝕏</a><% } %>
+          <% if (brand.telegram) { %><a href="<%= brand.telegram %>" rel="noopener nofollow" target="_blank" class="badge">Telegram</a><% } %>
+          <% if (brand.youtube) { %><a href="<%= brand.youtube %>" rel="noopener nofollow" target="_blank" class="badge">YouTube</a><% } %>
+        </div>
+      </div>
+
+      <div>
+        <h5>Platform</h5>
+        <a href="/">Home</a>
+        <a href="/pricing">Publisher payouts</a>
+        <a href="/products">Products</a>
+        <a href="/register">Create account</a>
+        <a href="/login">Sign in</a>
+      </div>
+
+      <div>
+        <h5>Resources</h5>
+        <a href="/blog">Blog</a>
+        <a href="/about">About us</a>
+        <a href="/contact">Contact</a>
+        <a href="/promote">Promote your blog / video</a>
+        <a href="/contact?kind=advertiser">Advertise with us</a>
+        <a href="/dashboard/api">Developer API</a>
+      </div>
+
+      <div>
+        <h5>Legal</h5>
+        <a href="/privacy">Privacy policy</a>
+        <a href="/terms">Terms of service</a>
+        <a href="/cookies">Cookie policy</a>
+        <a href="/dmca">DMCA / copyright</a>
+        <a href="/disclaimer">Disclaimer</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>© <%= new Date().getFullYear() %> <%= brand.company %>. All rights reserved.</div>
+      <div class="row gap-3">
+        <span>Support: <a href="mailto:<%= brand.supportEmail %>" style="display:inline"><%= brand.supportEmail %></a></span>
+      </div>
+    </div>
+  </div>
+</footer>

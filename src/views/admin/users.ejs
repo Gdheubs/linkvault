@@ -1,0 +1,65 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <div class="page-head">
+      <div><h1>Users</h1><p class="muted"><%= num(total) %> account<%= total === 1 ? '' : 's' %>.</p></div>
+    </div>
+
+    <form method="get" class="row gap-2 wrapf mb-3">
+      <input class="input" name="q" placeholder="Email, name or referral code…" value="<%= search %>" style="max-width:320px">
+      <select class="select" name="status" style="max-width:170px">
+        <option value="">Any status</option>
+        <% ['active','suspended','banned'].forEach(function (s) { %>
+          <option value="<%= s %>" <%= status === s ? 'selected' : '' %>><%= s %></option>
+        <% }); %>
+      </select>
+      <button class="btn">Filter</button>
+      <% if (search || status) { %><a href="/admin/users" class="btn btn-ghost">Reset</a><% } %>
+    </form>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>User</th><th class="num">Links</th><th class="num">Balance</th><th class="num">Pending</th>
+              <th class="num">Paid</th><th class="num">Score</th><th>Role</th><th>Status</th><th>Joined</th></tr>
+        </thead>
+        <tbody>
+          <% users.forEach(function (u) { %>
+            <tr>
+              <td>
+                <a href="/admin/users/<%= u.id %>" class="row gap-2">
+                  <span class="avatar"><%= (u.name || u.email).slice(0,1).toUpperCase() %></span>
+                  <div style="min-width:0">
+                    <div style="font-weight:600" class="truncate"><%= u.name || u.email.split('@')[0] %></div>
+                    <div class="xs muted truncate"><%= u.email %></div>
+                  </div>
+                </a>
+              </td>
+              <td class="num"><%= num(u.links) %></td>
+              <td class="num"><%= usd(u.balance_micros) %></td>
+              <td class="num muted"><%= usd(u.pending_micros) %></td>
+              <td class="num"><%= usd(u.paid_micros) %></td>
+              <td class="num">
+                <span class="badge <%= u.fraud_score >= 60 ? 'badge-danger' : u.fraud_score >= 35 ? 'badge-warn' : 'badge-ok' %>"><%= u.fraud_score %></span>
+              </td>
+              <td><span class="badge <%= u.role === 'admin' ? 'badge-brand' : '' %>"><%= u.role %></span></td>
+              <td><span class="badge <%= u.status === 'active' ? 'badge-ok' : u.status === 'banned' ? 'badge-danger' : 'badge-warn' %>"><%= u.status %></span></td>
+              <td class="small muted"><%= fmtDate(u.created_at) %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (pages > 1) { %>
+      <div class="pagination">
+        <% for (let i = 1; i <= pages; i++) { %>
+          <a href="?page=<%= i %><%= search ? '&q=' + encodeURIComponent(search) : '' %><%= status ? '&status=' + status : '' %>" class="<%= i === page ? 'on' : '' %>"><%= i %></a>
+        <% } %>
+      </div>
+    <% } %>
+  </main>
+</div>
+<%- include('../partials/foot') %>

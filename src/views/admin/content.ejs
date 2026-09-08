@@ -1,0 +1,216 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>Content</h1>
+        <p class="muted">The blog, products and policy pages — this is the surface an ad review actually looks at.</p>
+      </div>
+      <a href="/admin/content/post/new" class="btn btn-primary">+ New article</a>
+    </div>
+
+    <div class="tabs" data-tabs="content">
+      <button data-tab="posts" class="on">Blog (<%= posts.length %>)</button>
+      <button data-tab="products">Products (<%= products.length %>)</button>
+      <button data-tab="pages">Policy pages (<%= pages.length %>)</button>
+      <button data-tab="inbox">Inbox (<%= messages.filter(function(m){return m.status==='open'}).length %>)</button>
+    </div>
+
+    <!-- ── posts ────────────────────────────────────────────────────── -->
+    <div data-panel="posts" data-panel-group="content">
+      <div class="card">
+        <% if (!posts.length) { %>
+          <div class="empty"><div class="empty-mark">✎</div>No articles yet. Original written content is what makes an ad-network application succeed.</div>
+        <% } else { %>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Title</th><th>Tags</th><th>Status</th><th class="num">Views</th><th>Published</th><th></th></tr></thead>
+              <tbody>
+                <% posts.forEach(function (p) { %>
+                  <tr>
+                    <td>
+                      <a href="/admin/content/post/<%= p.id %>" style="font-weight:600"><%= truncate(p.title, 46) %></a>
+                      <div class="code-chip mt-1">/blog/<%= p.slug %></div>
+                    </td>
+                    <td class="small muted"><%= truncate(p.tags, 24) %></td>
+                    <td><span class="badge <%= p.status === 'published' ? 'badge-ok' : 'badge-warn' %>"><%= p.status %></span></td>
+                    <td class="num"><%= num(p.views) %></td>
+                    <td class="small muted"><%= fmtDate(p.published_at) %></td>
+                    <td>
+                      <div class="row gap-1">
+                        <a href="/blog/<%= p.slug %>" target="_blank" rel="noopener" class="btn btn-xs">View</a>
+                        <form method="post" action="/admin/content/post/<%= p.id %>/delete" data-confirm="Delete this article?">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <button class="btn btn-xs btn-danger">×</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- ── products ─────────────────────────────────────────────────── -->
+    <div data-panel="products" data-panel-group="content" class="hide">
+      <div class="card mb-3">
+        <div class="card-head"><span class="card-title">Add / edit product</span></div>
+        <form method="post" action="/admin/content/product" class="form-grid" id="productForm">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="form-grid two">
+            <div class="field"><label class="label">Name</label><input class="input" name="name" required maxlength="120"></div>
+            <div class="field"><label class="label">Slug</label><input class="input mono" name="slug" maxlength="80" placeholder="auto from name"></div>
+          </div>
+          <div class="field"><label class="label">Tagline</label><input class="input" name="tagline" maxlength="200"></div>
+          <div class="field">
+            <label class="label">Description (markdown)</label>
+            <textarea class="textarea" name="description" maxlength="8000"></textarea>
+          </div>
+          <div class="field">
+            <label class="label">Features (one per line)</label>
+            <textarea class="textarea" name="features" style="min-height:90px"></textarea>
+          </div>
+          <div class="form-grid two">
+            <div class="field"><label class="label">Price (USD)</label><input class="input" name="price" type="number" step="0.01" min="0" value="0"></div>
+            <div class="field"><label class="label">Period</label><input class="input" name="period" maxlength="30" value="one-time"></div>
+          </div>
+          <div class="form-grid two">
+            <div class="field"><label class="label">Image URL</label><input class="input" name="image" maxlength="500"></div>
+            <div class="field"><label class="label">Buy / info URL</label><input class="input" name="url" maxlength="500"></div>
+          </div>
+          <div class="form-grid two">
+            <div class="field"><label class="label">Badge</label><input class="input" name="badge" maxlength="40" placeholder="Popular"></div>
+            <div class="field"><label class="label">Sort order</label><input class="input" name="sort" type="number" min="0" max="999" value="0"></div>
+          </div>
+          <div class="field">
+            <label class="label">Status</label>
+            <select class="select" name="status"><option value="active">active</option><option value="hidden">hidden</option></select>
+          </div>
+          <button class="btn btn-primary">Save product</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Catalogue</span></div>
+        <% if (!products.length) { %>
+          <div class="empty"><div class="empty-mark">▣</div>No products yet.</div>
+        <% } else { %>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Product</th><th class="num">Price</th><th class="num">Views</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                <% products.forEach(function (p) { %>
+                  <tr>
+                    <td>
+                      <div style="font-weight:600"><%= p.name %></div>
+                      <div class="xs muted"><%= truncate(p.tagline, 50) %></div>
+                    </td>
+                    <td class="num"><%= p.price_micros ? usd(p.price_micros) : 'Free' %></td>
+                    <td class="num"><%= num(p.clicks) %></td>
+                    <td><span class="badge <%= p.status === 'active' ? 'badge-ok' : 'badge-warn' %>"><%= p.status %></span></td>
+                    <td>
+                      <div class="row gap-1">
+                        <button class="btn btn-xs" data-fill-form="#productForm"
+                          data-fill='<%- JSON.stringify({ name: p.name, slug: p.slug, tagline: p.tagline, description: p.description, features: (function(){ try { return JSON.parse(p.features).join("\n"); } catch (e) { return ""; } })(), price: (p.price_micros/1000000), period: p.period, image: p.image, url: p.url, badge: p.badge, sort: p.sort, status: p.status }) %>'>Edit</button>
+                        <form method="post" action="/admin/content/product/<%= p.id %>/delete" data-confirm="Delete this product?">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <button class="btn btn-xs btn-danger">×</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- ── pages ────────────────────────────────────────────────────── -->
+    <div data-panel="pages" data-panel-group="content" class="hide">
+      <div class="alert alert-info mb-3">
+        <span class="alert-mark">ℹ</span>
+        <div class="small">
+          Ad networks expect a real Privacy policy, Terms, Cookie policy, DMCA process, Disclaimer and About page,
+          each reachable from the footer. All six are seeded and editable here — <strong>read them and adapt them to
+          your jurisdiction before you go live.</strong> They are a starting template, not legal advice.
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-head"><span class="card-title">Edit a page</span></div>
+        <form method="post" action="/admin/content/page" class="form-grid" id="pageForm">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="form-grid two">
+            <div class="field"><label class="label">Slug</label><input class="input mono" name="slug" required maxlength="80" placeholder="privacy"></div>
+            <div class="field"><label class="label">Title</label><input class="input" name="title" required maxlength="200"></div>
+          </div>
+          <div class="field">
+            <label class="label">Body (markdown)</label>
+            <textarea class="textarea code" name="body" style="min-height:340px" required></textarea>
+          </div>
+          <button class="btn btn-primary">Save page</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Pages</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Slug</th><th>Title</th><th>Updated</th><th></th></tr></thead>
+            <tbody>
+              <% pages.forEach(function (p) { %>
+                <tr>
+                  <td class="mono">/<%= p.slug %></td>
+                  <td><%= p.title %></td>
+                  <td class="small muted"><%= timeAgo(p.updated_at) %></td>
+                  <td><a href="/<%= p.slug %>" target="_blank" rel="noopener" class="btn btn-xs">View ↗</a></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── inbox ────────────────────────────────────────────────────── -->
+    <div data-panel="inbox" data-panel-group="content" class="hide">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Contact messages</span></div>
+        <% if (!messages.length) { %>
+          <div class="empty"><div class="empty-mark">✉</div>Inbox is empty.</div>
+        <% } else { %>
+          <div class="stack gap-2">
+            <% messages.forEach(function (m) { %>
+              <div class="card card-tight" style="background:<%= m.status === 'open' ? 'var(--surface-2)' : 'transparent' %>">
+                <div class="row between gap-2 wrapf mb-2">
+                  <div class="row gap-2 wrapf">
+                    <span class="badge <%= m.kind === 'dmca' ? 'badge-danger' : m.kind === 'advertiser' ? 'badge-brand' : '' %>"><%= m.kind %></span>
+                    <strong class="small"><%= m.name %></strong>
+                    <a href="mailto:<%= m.email %>" class="small" style="color:var(--brand)"><%= m.email %></a>
+                    <span class="xs muted"><%= timeAgo(m.created_at) %></span>
+                  </div>
+                  <% if (m.status === 'open') { %>
+                    <form method="post" action="/admin/content/message/<%= m.id %>/close">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <button class="btn btn-xs">Close</button>
+                    </form>
+                  <% } else { %><span class="badge">closed</span><% } %>
+                </div>
+                <% if (m.subject) { %><div class="small" style="font-weight:600"><%= m.subject %></div><% } %>
+                <p class="small mt-1" style="white-space:pre-wrap"><%= m.body %></p>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>

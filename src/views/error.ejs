@@ -1,0 +1,14 @@
+<%- include('partials/head', { noindex: true, description: message }) %>
+<%- include('partials/nav') %>
+<div class="wrap-narrow tc" style="padding:12vh 0 10vh">
+  <div style="font-size:3.6rem;opacity:.35;margin-bottom:12px">⌀</div>
+  <div class="badge mb-2">Error <%= code %></div>
+  <h1 style="font-size:clamp(1.6rem,4vw,2.4rem)"><%= title %></h1>
+  <p class="lead" style="margin:14px auto 0"><%= message %></p>
+  <div class="row center gap-2 mt-4">
+    <a href="/" class="btn btn-primary">Back to homepage</a>
+    <a href="/blog" class="btn btn-ghost">Read the blog</a>
+  </div>
+</div>
+<%- include('partials/footer') %>
+<%- include('partials/foot') %>

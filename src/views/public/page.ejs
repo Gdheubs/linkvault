@@ -1,0 +1,28 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<section class="section-sm">
+  <div class="wrap">
+    <div class="grid g-side">
+      <div>
+        <div class="upper mb-1">Legal &amp; policy</div>
+        <h1 style="font-size:clamp(1.8rem,4vw,2.6rem)"><%= page.title %></h1>
+        <p class="small muted mt-2">Last updated <%= fmtDate(page.updated_at, { dateStyle: 'long' }) %></p>
+        <div class="prose card mt-3"><%- bodyHtml %></div>
+      </div>
+      <aside>
+        <div class="card card-tight" style="position:sticky;top:calc(var(--nav-h) + 18px)">
+          <div class="card-head"><span class="card-title">All policies</span></div>
+          <div class="stack gap-1">
+            <% legalNav.forEach(function (s) { %>
+              <a href="/<%= s %>" class="<%= currentPath === '/' + s ? 'badge badge-brand' : 'badge' %>" style="justify-content:flex-start"><%= s.charAt(0).toUpperCase() + s.slice(1) %></a>
+            <% }); %>
+          </div>
+          <div class="divider"></div>
+          <p class="xs muted">Questions about this policy? Email <a href="mailto:<%= brand.supportEmail %>" style="color:var(--brand)"><%= brand.supportEmail %></a>.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>
+<%- include('../partials/foot') %>

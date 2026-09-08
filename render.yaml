@@ -1,0 +1,57 @@
+# Render blueprint. Import this repo at dashboard.render.com/blueprints.
+#
+# NOTE: a persistent disk requires a paid instance type. On the free tier the
+# filesystem is wiped on every deploy, which for this app means losing every
+# account, link and balance. Do not run it there.
+services:
+  - type: web
+    name: linkvault
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: oregon
+    healthCheckPath: /healthz
+
+    # SQLite tolerates exactly one writer. Never scale this above 1.
+    numInstances: 1
+
+    disk:
+      name: linkvault-data
+      mountPath: /app/data
+      sizeGB: 1
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: DB_FILE
+        value: /app/data/linkvault.db
+
+      # Generated once by Render and then held stable across deploys.
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: TOKEN_SECRET
+        generateValue: true
+      - key: HASH_SALT
+        generateValue: true
+      - key: TELEGRAM_WEBHOOK_SECRET
+        generateValue: true
+
+      # Fill these in from the dashboard.
+      - key: BRAND_NAME
+        value: LinkVault
+      - key: SUPPORT_EMAIL
+        sync: false
+      - key: DMCA_EMAIL
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+      - key: TELEGRAM_STORAGE_CHAT_ID
+        sync: false
+      - key: ADSENSE_CLIENT
+        sync: false
+      - key: ADSENSE_ENABLED
+        value: "false"

@@ -1,0 +1,104 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<section class="section-sm">
+  <div class="wrap">
+    <div class="grid g-side">
+      <div>
+        <div class="upper mb-1">Contact</div>
+        <h1 style="font-size:clamp(1.8rem,4vw,2.6rem)">Talk to a human</h1>
+        <p class="lead mt-2">
+          Support, advertising enquiries, and copyright notices all land in the same queue and are triaged by type.
+        </p>
+
+        <% if (sent) { %>
+          <div class="alert alert-ok mt-4">
+            <span class="alert-mark">✓</span>
+            <div>
+              <strong>Message received.</strong>
+              <p class="small mt-1">We reply to <%= brand.supportEmail %> business hours, usually within two working days.</p>
+            </div>
+          </div>
+          <a href="/" class="btn mt-3">Back to homepage</a>
+        <% } else { %>
+          <% if (error) { %>
+            <div class="alert alert-danger mt-3"><span class="alert-mark">⚠</span><div><%= error %></div></div>
+          <% } %>
+
+          <form method="post" action="/contact" class="card mt-3 form-grid">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <!-- honeypot: hidden from humans, irresistible to bots -->
+            <div style="position:absolute;left:-9999px" aria-hidden="true">
+              <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+            </div>
+
+            <div class="form-grid two">
+              <div class="field">
+                <label class="label" for="c-name">Your name</label>
+                <input class="input" id="c-name" name="name" required maxlength="100" value="<%= values.name || '' %>">
+              </div>
+              <div class="field">
+                <label class="label" for="c-email">Email</label>
+                <input class="input" id="c-email" name="email" type="email" required maxlength="190" value="<%= values.email || '' %>">
+              </div>
+            </div>
+
+            <div class="form-grid two">
+              <div class="field">
+                <label class="label" for="c-kind">What is this about?</label>
+                <select class="select" id="c-kind" name="kind">
+                  <% const kinds = [['general','General enquiry'],['support','Publisher support'],['advertiser','Advertising / media buying'],['dmca','DMCA / copyright notice']]; %>
+                  <% kinds.forEach(function (k) { %>
+                    <option value="<%= k[0] %>" <%= (values.kind || query.kind) === k[0] ? 'selected' : '' %>><%= k[1] %></option>
+                  <% }); %>
+                </select>
+              </div>
+              <div class="field">
+                <label class="label" for="c-subject">Subject</label>
+                <input class="input" id="c-subject" name="subject" maxlength="200" value="<%= values.subject || '' %>">
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label" for="c-body">Message</label>
+              <textarea class="textarea" id="c-body" name="body" required maxlength="5000"
+                placeholder="Give us enough detail to actually help — link codes, account email, timestamps."><%= values.body || '' %></textarea>
+              <span class="hint">For a DMCA notice, include the infringing short-link code, the original work, and a statement of good-faith belief.</span>
+            </div>
+
+            <button class="btn btn-primary btn-lg">Send message</button>
+          </form>
+        <% } %>
+      </div>
+
+      <aside class="stack gap-3">
+        <div class="card card-tight">
+          <div class="card-head"><span class="card-title">Direct channels</span></div>
+          <dl class="kv">
+            <dt>Support</dt><dd><a href="mailto:<%= brand.supportEmail %>" style="color:var(--brand)"><%= brand.supportEmail %></a></dd>
+            <dt>Copyright</dt><dd><a href="mailto:<%= brand.dmcaEmail %>" style="color:var(--brand)"><%= brand.dmcaEmail %></a></dd>
+          </dl>
+          <% if (brand.address) { %>
+            <div class="divider"></div>
+            <div class="upper mb-1">Registered address</div>
+            <p class="small"><%= brand.address %></p>
+          <% } %>
+        </div>
+
+        <div class="card card-tight">
+          <div class="card-head"><span class="card-title">Before you write</span></div>
+          <ul class="feature-list">
+            <li>Payout questions: check <a href="/pricing" style="color:var(--brand)">the payout page</a> first.</li>
+            <li>Link disabled? The reason is on the link row in your dashboard.</li>
+            <li>API problems: include the request ID and full response body.</li>
+          </ul>
+        </div>
+
+        <%- ads.render('site_side') %>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>
+<%- include('../partials/foot') %>

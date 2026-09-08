@@ -1,0 +1,39 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<section class="section-sm">
+  <div class="wrap">
+    <div class="tc mb-4">
+      <div class="upper mb-1">Products</div>
+      <h1 style="font-size:clamp(1.9rem,4.4vw,3rem)">Tools we build</h1>
+      <p class="lead" style="margin:14px auto 0">Upgrades and utilities for people who publish links at volume.</p>
+    </div>
+
+    <% if (!products.length) { %>
+      <div class="card empty"><div class="empty-mark">▣</div>No products listed yet.</div>
+    <% } else { %>
+      <div class="grid g3">
+        <% products.forEach(function (p) {
+             let feats = []; try { feats = JSON.parse(p.features); } catch (e) { feats = []; } %>
+          <div class="card card-hover card-lift reveal stack gap-3">
+            <div class="row between gap-2">
+              <h3 style="font-size:1.1rem"><%= p.name %></h3>
+              <% if (p.badge) { %><span class="badge badge-brand"><%= p.badge %></span><% } %>
+            </div>
+            <p class="small"><%= p.tagline %></p>
+            <div>
+              <span class="price"><%= p.price_micros ? usd(p.price_micros) : 'Free' %></span>
+              <span class="price-period">/ <%= p.period %></span>
+            </div>
+            <% if (feats.length) { %>
+              <ul class="feature-list"><% feats.slice(0,5).forEach(function (f) { %><li><%= f %></li><% }); %></ul>
+            <% } %>
+            <a href="/products/<%= p.slug %>" class="btn btn-block mt-2" style="margin-top:auto">View details</a>
+          </div>
+        <% }); %>
+      </div>
+    <% } %>
+    <div class="mt-4"><%- ads.render('site_mid') %></div>
+  </div>
+</section>
+<%- include('../partials/footer') %>
+<%- include('../partials/foot') %>

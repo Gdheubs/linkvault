@@ -1,0 +1,153 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <div class="page-head">
+      <div><h1>Traffic</h1><p class="muted">Platform-wide visitor breakdowns.</p></div>
+      <div class="rangebar">
+        <% [7, 30, 90].forEach(function (d) { %>
+          <a href="?days=<%= d %>" class="<%= days === d ? 'on' : '' %>"><%= d %>d</a>
+        <% }); %>
+      </div>
+    </div>
+
+    <div class="grid g4 mb-3">
+      <div class="card stat"><div class="stat-label">Clicks</div><div class="stat-value"><%= num(summary.range.clicks) %></div></div>
+      <div class="card stat"><div class="stat-label">Unique</div><div class="stat-value"><%= num(summary.range.unique_clicks) %></div>
+        <div class="stat-sub"><%= pct(summary.range.unique_clicks, summary.range.clicks) %></div></div>
+      <div class="card stat"><div class="stat-label">Valid</div><div class="stat-value"><%= num(summary.range.valid_visits) %></div>
+        <div class="stat-sub"><%= pct(summary.range.valid_visits, summary.range.clicks) %> pass rate</div></div>
+      <div class="card stat"><div class="stat-label">Completed</div><div class="stat-value"><%= num(summary.range.completed_visits) %></div>
+        <div class="stat-sub"><%= (summary.completionRate * 100).toFixed(1) %>% completion</div></div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-head">
+        <span class="card-title">Funnel over time</span>
+        <div class="row gap-3 xs muted">
+          <span class="row gap-1"><i class="legend-key" style="background:var(--brand)"></i> Clicks</span>
+          <span class="row gap-1"><i class="legend-key" style="background:var(--brand-3)"></i> Valid</span>
+        </div>
+      </div>
+      <div class="chart-wrap" data-chart='<%- JSON.stringify({ type:"area", x:"label", y:"clicks", y2:"valid_visits", yLabel:"Clicks", y2Label:"Valid", series }) %>'></div>
+    </div>
+
+    <div class="grid g2 mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Countries</span><span class="badge"><%= countries.length %></span></div>
+        <div class="table-wrap scroll-y" style="border:0">
+          <table>
+            <thead><tr><th>Country</th><th class="num">Clicks</th><th class="num">Valid</th><th class="num">Paid out</th></tr></thead>
+            <tbody>
+              <% countries.forEach(function (c) { %>
+                <tr>
+                  <td><%= countryFlag(c.key) %> <%= countryName(c.key) %></td>
+                  <td class="num"><%= num(c.clicks) %></td>
+                  <td class="num"><%= num(c.valid_visits) %></td>
+                  <td class="num"><%= usd(c.publisher_micros) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Referrers</span></div>
+        <% if (!referers.length) { %><div class="empty">No referrer data.</div><% } else { %>
+          <div class="barlist">
+            <% const topR = Math.max.apply(null, referers.map(function(r){return r.clicks})) || 1; %>
+            <% referers.forEach(function (r) { %>
+              <div class="barlist-row">
+                <div class="barlist-name"><span><%= r.key %></span></div>
+                <div class="barlist-val"><%= num(r.clicks) %></div>
+                <div class="barlist-track"><i data-meter="<%= Math.round((r.clicks / topR) * 100) %>" style="width:0"></i></div>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="grid g3 mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Devices</span></div>
+        <% if (!devices.length) { %><p class="small muted">No data.</p><% } else { %>
+          <div class="row gap-3" style="align-items:center">
+            <div data-donut='<%- JSON.stringify({ slices: devices.map(function(d){ return { label: d.key, value: d.clicks }; }) }) %>'></div>
+            <div class="legend grow">
+              <% const td = devices.reduce(function(s,d){return s+d.clicks},0) || 1; %>
+              <% const pal = ['var(--brand)','var(--brand-2)','var(--brand-3)']; %>
+              <% devices.forEach(function (d, i) { %>
+                <div class="legend-row"><i class="legend-key" style="background:<%= pal[i%pal.length] %>"></i>
+                  <span class="legend-name"><%= d.key %></span><span class="legend-val"><%= pct(d.clicks, td, 0) %></span></div>
+              <% }); %>
+            </div>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Browsers</span></div>
+        <div class="barlist">
+          <% const topB = Math.max.apply(null, browsers.map(function(b){return b.clicks})) || 1; %>
+          <% browsers.forEach(function (b) { %>
+            <div class="barlist-row">
+              <div class="barlist-name"><span><%= b.key %></span></div>
+              <div class="barlist-val"><%= num(b.clicks) %></div>
+              <div class="barlist-track"><i data-meter="<%= Math.round((b.clicks / topB) * 100) %>" style="width:0"></i></div>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Operating systems</span></div>
+        <div class="barlist">
+          <% const topO = Math.max.apply(null, oses.map(function(o){return o.clicks})) || 1; %>
+          <% oses.forEach(function (o) { %>
+            <div class="barlist-row">
+              <div class="barlist-name"><span><%= o.key %></span></div>
+              <div class="barlist-val"><%= num(o.clicks) %></div>
+              <div class="barlist-track"><i data-meter="<%= Math.round((o.clicks / topO) * 100) %>" style="width:0"></i></div>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Live visit feed</span><span class="pill"><span class="dot live"></span> Real time</span></div>
+      <% if (!recent.length) { %>
+        <div class="empty"><div class="empty-mark">◔</div>No visits yet.</div>
+      <% } else { %>
+        <div class="table-wrap scroll-y">
+          <table>
+            <thead><tr><th>When</th><th>Link</th><th>Origin</th><th>Client</th><th class="num">Score</th><th>Status</th><th class="num">Paid</th></tr></thead>
+            <tbody>
+              <% recent.forEach(function (v) { %>
+                <tr>
+                  <td class="small muted"><%= timeAgo(v.created_at) %></td>
+                  <td><span class="code-chip">/s/<%= v.code %></span></td>
+                  <td class="small"><%= countryFlag(v.country) %> <%= v.country %></td>
+                  <td class="small muted"><%= v.browser %> · <%= v.os %> · <%= v.device %></td>
+                  <td class="num">
+                    <span class="badge <%= v.fraud_score >= 60 ? 'badge-danger' : v.fraud_score >= 35 ? 'badge-warn' : 'badge-ok' %>"><%= v.fraud_score %></span>
+                  </td>
+                  <td>
+                    <% if (v.is_completed && v.is_valid) { %><span class="badge badge-ok">Paid</span>
+                    <% } else if (v.is_completed) { %><span class="badge badge-warn">Unpaid</span>
+                    <% } else { %><span class="badge">In flow</span><% } %>
+                  </td>
+                  <td class="num"><%= usd(v.publisher_micros, 4) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>

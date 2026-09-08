@@ -1,0 +1,45 @@
+<aside class="side">
+  <div class="side-group">
+    <div class="upper">Overview</div>
+    <a href="/dashboard" class="<%= tab === 'overview' ? 'on' : '' %>"><span class="side-icon">◈</span> Dashboard</a>
+    <a href="/dashboard/analytics" class="<%= tab === 'analytics' ? 'on' : '' %>"><span class="side-icon">◔</span> Analytics</a>
+  </div>
+
+  <div class="side-group">
+    <div class="upper">Publish</div>
+    <a href="/dashboard/links" class="<%= tab === 'links' ? 'on' : '' %>"><span class="side-icon">⛓</span> My links</a>
+    <a href="/dashboard/files" class="<%= tab === 'files' ? 'on' : '' %>"><span class="side-icon">▤</span> File vault</a>
+    <a href="/dashboard/campaigns" class="<%= tab === 'campaigns' ? 'on' : '' %>"><span class="side-icon">◎</span> Ad flows</a>
+  </div>
+
+  <div class="side-group">
+    <div class="upper">Advertise</div>
+    <a href="/dashboard/ads" class="<%= tab === 'ads' ? 'on' : '' %>"><span class="side-icon">◈</span> Ad campaigns</a>
+  </div>
+
+  <div class="side-group">
+    <div class="upper">Money</div>
+    <a href="/dashboard/earnings" class="<%= tab === 'earnings' ? 'on' : '' %>"><span class="side-icon">$</span> Earnings</a>
+    <a href="/dashboard/referrals" class="<%= tab === 'referrals' ? 'on' : '' %>"><span class="side-icon">⇄</span> Referrals</a>
+  </div>
+
+  <div class="side-group">
+    <div class="upper">Account</div>
+    <a href="/dashboard/api" class="<%= tab === 'api' ? 'on' : '' %>"><span class="side-icon">{}</span> API</a>
+    <a href="/dashboard/settings" class="<%= tab === 'settings' ? 'on' : '' %>"><span class="side-icon">⚙</span> Settings</a>
+    <% if (user && user.role === 'admin') { %>
+      <a href="/admin"><span class="side-icon">★</span> Admin panel</a>
+    <% } %>
+  </div>
+
+  <div class="side-group hide-md" style="margin-top:auto">
+    <div class="card card-tight" style="background:var(--surface-2)">
+      <div class="upper">Withdrawable</div>
+      <div style="font-size:1.35rem;font-weight:800;letter-spacing:-.03em;margin:4px 0">
+        <%= usd(me.balance_micros) %>
+      </div>
+      <div class="xs muted"><%= usd(me.pending_micros) %> pending release</div>
+      <a href="/dashboard/earnings" class="btn btn-sm btn-block mt-2">Withdraw</a>
+    </div>
+  </div>
+</aside>

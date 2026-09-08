@@ -1,0 +1,237 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<!-- ── hero ────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="wrap">
+    <div class="grid g2 gap-5" style="align-items:center">
+      <div>
+        <span class="hero-badge"><span class="dot live"></span> <%= num(totals.clicks || 0) %> visits routed &amp; scored</span>
+        <h1 class="balance">Turn a link into <span class="gradient-text">revenue</span>, not just a redirect.</h1>
+        <p class="lead">
+          <%= brand.name %> is a full short-link platform: a configurable ad flow you control step by step,
+          an anti-fraud engine that protects your advertiser relationships, and Telegram-backed file delivery
+          that never exposes a public download URL.
+        </p>
+        <div class="hero-cta">
+          <a href="/register" class="btn btn-primary btn-lg">Start earning free</a>
+          <a href="/pricing" class="btn btn-ghost btn-lg">See payout model</a>
+        </div>
+
+        <div class="hero-proof">
+          <div>
+            <div class="proof-num"><span data-count="<%= shares.publisher %>">0</span>%</div>
+            <div class="proof-label">Publisher share</div>
+          </div>
+          <div>
+            <div class="proof-num"><span data-count="<%= totals.links || 0 %>">0</span></div>
+            <div class="proof-label">Links created</div>
+          </div>
+          <div>
+            <div class="proof-num"><span data-count="<%= totals.publishers || 0 %>">0</span></div>
+            <div class="proof-label">Publishers</div>
+          </div>
+          <div>
+            <div class="proof-num"><span data-count="<%= config.monetization.waitSeconds %>">0</span>s</div>
+            <div class="proof-label">Default wait</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- dashboard mock -->
+      <div class="hero-visual reveal">
+        <div class="mock float">
+          <div class="mock-bar">
+            <span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span>
+            <span class="xs muted" style="margin-left:8px"><%= baseUrl.replace(/^https?:\/\//, '') %>/dashboard</span>
+          </div>
+          <div class="mock-body">
+            <div class="grid g2" style="gap:12px">
+              <div class="card card-tight stat">
+                <div class="stat-label">Today's clicks</div>
+                <div class="stat-value">12,842</div>
+                <div class="stat-sub"><span class="delta up">▲ 18.4%</span> vs yesterday</div>
+                <div data-spark="[4,7,6,11,9,14,12,18,16,22,19,26]"></div>
+              </div>
+              <div class="card card-tight stat">
+                <div class="stat-label">Valid visits</div>
+                <div class="stat-value">10,921</div>
+                <div class="stat-sub"><span class="delta up">▲ 85.0%</span> pass rate</div>
+                <div data-spark="[3,6,5,9,8,12,11,15,14,19,17,23]"></div>
+              </div>
+            </div>
+            <div class="card card-tight mt-2">
+              <div class="card-head"><span class="card-title">Earnings, last 14 days</span><span class="badge badge-ok">Live</span></div>
+              <div class="chart-wrap chart-sm" data-chart='{"type":"area","x":"label","y":"v","yLabel":"Earnings","format":"money","height":140,"series":[{"label":"01","v":420000},{"label":"02","v":610000},{"label":"03","v":540000},{"label":"04","v":880000},{"label":"05","v":760000},{"label":"06","v":1180000},{"label":"07","v":1040000},{"label":"08","v":1520000},{"label":"09","v":1390000},{"label":"10","v":1860000},{"label":"11","v":1720000},{"label":"12","v":2240000},{"label":"13","v":2080000},{"label":"14","v":2610000}]}'></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── the flow ────────────────────────────────────────────────────────── -->
+<section class="section-sm">
+  <div class="wrap">
+    <div class="tc mb-4">
+      <div class="upper mb-1">How it works</div>
+      <h2 class="balance">Every visit runs the same audited pipeline</h2>
+    </div>
+    <div class="flow">
+      <div class="flow-node reveal"><div class="upper">01</div><strong>Short link</strong><span class="xs muted">/s/X8K29D</span></div>
+      <div class="flow-node reveal"><div class="upper">02</div><strong>Fraud scoring</strong><span class="xs muted">25+ signals at entry</span></div>
+      <div class="flow-node reveal"><div class="upper">03</div><strong>Ad flow</strong><span class="xs muted">1–8 configurable steps</span></div>
+      <div class="flow-node reveal"><div class="upper">04</div><strong>Signed token</strong><span class="xs muted">HMAC, expiring</span></div>
+      <div class="flow-node reveal"><div class="upper">05</div><strong>Delivery</strong><span class="xs muted">Telegram or redirect</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── features ────────────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="tc mb-4">
+      <div class="upper mb-1">Built for operators</div>
+      <h2 class="balance">Not a redirector with ads bolted on</h2>
+      <p class="lead" style="margin:14px auto 0">Six engines, each independently configurable from the admin panel.</p>
+    </div>
+
+    <div class="grid g3">
+      <% const features = [
+        { i:'◎', t:'Configurable monetization', d:'Campaigns are ordered step lists, not hard-coded pages. Run three steps, or one. Override the step count per country or per device at request time.' },
+        { i:'⚠', t:'Anti-fraud engine', d:'Bot UAs, headless markers, IP bursts, link spray, repeat clicks, self-traffic, duplicate fingerprints, impossible completion speed and publisher-level anomalies — each a named, auditable signal.' },
+        { i:'$',  t:'Transparent revenue engine', d:'Rate cards by country and device, fill-rate modelling, an immutable ledger, a hold window before earnings become withdrawable, and one-click reversal on a fraud finding.' },
+        { i:'▤', t:'Telegram file vault', d:'Files live in Telegram storage. No public bucket, no guessable URL. The media bot verifies a signed completion token before it releases a single byte.' },
+        { i:'◔', t:'Real analytics', d:'Clicks, uniques, valid and completed visits, country and device splits, browser and OS, referrers, per-link drilldowns and a realised eCPM you can actually plan against.' },
+        { i:'{}', t:'Developer API', d:'Bearer-auth REST for links, stats and the vault, plus a one-shot /shorten endpoint for bookmarklets and integrations.' }
+      ] %>
+      <% features.forEach(function (f) { %>
+        <div class="card card-hover card-lift feature reveal">
+          <div class="feature-icon"><%= f.i %></div>
+          <h3><%= f.t %></h3>
+          <p><%= f.d %></p>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+</section>
+
+<!-- ── rate sample ─────────────────────────────────────────────────────── -->
+<% if (rateSample && rateSample.length) { %>
+<section class="section-sm">
+  <div class="wrap">
+    <div class="grid g-side">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <span class="card-title">Configured rate card</span>
+            <p class="xs muted mt-1">What this deployment currently pays per 1,000 valid visits.</p>
+          </div>
+          <a href="/pricing" class="btn btn-sm btn-ghost">Full table</a>
+        </div>
+        <div class="barlist">
+          <% const topCpm = Math.max.apply(null, rateSample.map(r => r.cpm_micros)) || 1; %>
+          <% rateSample.forEach(function (r) { %>
+            <div class="barlist-row">
+              <div class="barlist-name">
+                <span><%= countryFlag(r.country) %> <%= countryName(r.country) %></span>
+                <% if (r.device !== '*') { %><span class="badge"><%= r.device %></span><% } %>
+              </div>
+              <div class="barlist-val"><%= usd(r.cpm_micros, 3) %></div>
+              <div class="barlist-track"><i data-meter="<%= Math.round((r.cpm_micros / topCpm) * 100) %>" style="width:0"></i></div>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+
+      <div class="card" style="background:var(--surface-2)">
+        <div class="upper mb-2">Read this before you model revenue</div>
+        <p class="small"><%= disclaimer %></p>
+        <div class="divider"></div>
+        <a href="/pricing" class="btn btn-block">How payouts work</a>
+      </div>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<!-- ── site ad slot ────────────────────────────────────────────────────── -->
+<div class="wrap"><%- promos.block('site', { limit: 3, heading: "Promoted" }) %><%- ads.render('site_mid') %></div>
+
+<!-- ── products ────────────────────────────────────────────────────────── -->
+<% if (products && products.length) { %>
+<section class="section-sm">
+  <div class="wrap">
+    <div class="row between wrapf gap-2 mb-3">
+      <div><div class="upper mb-1">Products</div><h2>Tools we build and sell</h2></div>
+      <a href="/products" class="btn btn-ghost btn-sm">All products →</a>
+    </div>
+    <div class="grid g3">
+      <% products.forEach(function (p) { %>
+        <a href="/products/<%= p.slug %>" class="card card-hover reveal stack gap-2">
+          <div class="row between gap-2">
+            <h3 style="font-size:1.05rem"><%= p.name %></h3>
+            <% if (p.badge) { %><span class="badge badge-brand"><%= p.badge %></span><% } %>
+          </div>
+          <p class="small"><%= p.tagline %></p>
+          <div class="row between mt-2" style="margin-top:auto">
+            <span class="price" style="font-size:1.3rem"><%= p.price_micros ? usd(p.price_micros) : 'Free' %></span>
+            <span class="xs muted"><%= p.period %></span>
+          </div>
+        </a>
+      <% }); %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<!-- ── blog ────────────────────────────────────────────────────────────── -->
+<% if (posts && posts.length) { %>
+<section class="section-sm">
+  <div class="wrap">
+    <div class="row between wrapf gap-2 mb-3">
+      <div><div class="upper mb-1">From the blog</div><h2>Guides for publishers</h2></div>
+      <a href="/blog" class="btn btn-ghost btn-sm">All articles →</a>
+    </div>
+    <div class="grid g3">
+      <% posts.forEach(function (p) { %>
+        <a href="/blog/<%= p.slug %>" class="card post-card card-hover reveal">
+          <div class="post-cover">
+            <% if (p.cover) { %><img src="<%= p.cover %>" alt="" loading="lazy">
+            <% } else { %><div class="post-cover-mark">✦</div><% } %>
+          </div>
+          <div class="post-card-body">
+            <h3><%= p.title %></h3>
+            <p class="small"><%= truncate(p.excerpt, 110) %></p>
+            <div class="post-meta">
+              <span><%= p.read_minutes %> min read</span>
+              <span><%= fmtDate(p.published_at) %></span>
+            </div>
+          </div>
+        </a>
+      <% }); %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<!-- ── CTA ─────────────────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="card tc" style="padding:clamp(38px,6vw,68px);background:linear-gradient(135deg,color-mix(in oklab,var(--brand) 12%,var(--surface)),color-mix(in oklab,var(--brand-2) 9%,var(--surface)))">
+      <h2 class="balance">Create your first monetized link in under a minute</h2>
+      <p class="lead" style="margin:16px auto 0">
+        Free to join. Keep <%= shares.publisher %>% of what your traffic earns, withdraw from
+        <%= usd(config.revenue.minPayoutMicros) %>.
+      </p>
+      <div class="row center gap-2 mt-4 wrapf">
+        <a href="/register" class="btn btn-primary btn-lg">Create free account</a>
+        <a href="/contact?kind=advertiser" class="btn btn-ghost btn-lg">Advertise with us</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>
+<%- include('../partials/foot') %>

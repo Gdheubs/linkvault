@@ -1,0 +1,66 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<section class="section-sm">
+  <div class="wrap">
+    <div class="tc mb-4">
+      <div class="upper mb-1">Blog</div>
+      <h1 style="font-size:clamp(1.9rem,4.4vw,3rem)">Guides for link publishers</h1>
+      <p class="lead" style="margin:14px auto 0">
+        Practical writing on traffic quality, ad policy, payout modelling and secure file delivery.
+      </p>
+    </div>
+
+    <% if (tags.length) { %>
+      <div class="row center gap-1 wrapf mb-4">
+        <a href="/blog" class="badge <%= !tag ? 'badge-brand' : '' %>">All</a>
+        <% tags.forEach(function (t) { %>
+          <a href="/blog?tag=<%= encodeURIComponent(t) %>" class="badge <%= tag === t ? 'badge-brand' : '' %>"><%= t %></a>
+        <% }); %>
+      </div>
+    <% } %>
+
+    <% if (!posts.length) { %>
+      <div class="card empty"><div class="empty-mark">✎</div>No articles published yet.</div>
+    <% } else { %>
+      <div class="grid g3">
+        <% posts.forEach(function (p) { %>
+          <a href="/blog/<%= p.slug %>" class="card post-card card-hover reveal">
+            <div class="post-cover">
+              <% if (p.cover) { %><img src="<%= p.cover %>" alt="" loading="lazy">
+              <% } else { %><div class="post-cover-mark">✦</div><% } %>
+            </div>
+            <div class="post-card-body">
+              <div class="row gap-1 wrapf">
+                <% String(p.tags).split(',').filter(Boolean).slice(0,2).forEach(function (t) { %>
+                  <span class="badge"><%= t.trim() %></span>
+                <% }); %>
+              </div>
+              <h3><%= p.title %></h3>
+              <p class="small"><%= truncate(p.excerpt, 120) %></p>
+              <div class="post-meta">
+                <span><%= p.read_minutes %> min</span>
+                <span><%= fmtDate(p.published_at) %></span>
+                <span><%= num(p.views) %> views</span>
+              </div>
+            </div>
+          </a>
+        <% }); %>
+      </div>
+
+      <% if (pages > 1) { %>
+        <div class="pagination">
+          <% for (let i = 1; i <= pages; i++) { %>
+            <a href="/blog?page=<%= i %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %>" class="<%= i === page ? 'on' : '' %>"><%= i %></a>
+          <% } %>
+        </div>
+      <% } %>
+    <% } %>
+
+    <%- promos.block('blog', { limit: 3, heading: "Promoted" }) %>
+    <div class="mt-4"><%- ads.render('site_mid') %></div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>
+<%- include('../partials/foot') %>

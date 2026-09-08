@@ -1,0 +1,113 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<section class="section-sm">
+  <div class="wrap">
+    <div class="tc mb-4">
+      <div class="upper mb-1">Publisher payouts</div>
+      <h1 style="font-size:clamp(1.9rem,4.4vw,3rem)" class="balance">You keep <span class="gradient-text"><%= shares.publisher %>%</span></h1>
+      <p class="lead" style="margin:14px auto 0">
+        No monthly fee, no minimum traffic, no exclusivity. Here is exactly how a visit turns into money in your balance.
+      </p>
+    </div>
+
+    <!-- split -->
+    <div class="grid g3 mb-4">
+      <div class="card stat reveal">
+        <div class="stat-label">Publisher share</div>
+        <div class="stat-value"><%= shares.publisher %>%</div>
+        <div class="stat-sub">of gross revenue on every valid visit</div>
+      </div>
+      <div class="card stat reveal">
+        <div class="stat-label">Referral share</div>
+        <div class="stat-value"><%= shares.referral %>%</div>
+        <div class="stat-sub">lifetime, paid from the platform cut — never from your referral's earnings</div>
+      </div>
+      <div class="card stat reveal">
+        <div class="stat-label">Minimum withdrawal</div>
+        <div class="stat-value"><%= usd(minPayout) %></div>
+        <div class="stat-sub">after a <%= holdHours %>h fraud-review hold</div>
+      </div>
+    </div>
+
+    <!-- lifecycle -->
+    <div class="card mb-4">
+      <div class="card-head"><span class="card-title">The life of one visit</span></div>
+      <div class="flow">
+        <div class="flow-node"><div class="upper">01</div><strong>Click</strong><span class="xs muted">Scored at entry</span></div>
+        <div class="flow-node"><div class="upper">02</div><strong>Valid visit</strong><span class="xs muted">Passed fraud checks</span></div>
+        <div class="flow-node"><div class="upper">03</div><strong>Completion</strong><span class="xs muted">Flow finished</span></div>
+        <div class="flow-node"><div class="upper">04</div><strong>Pending</strong><span class="xs muted"><%= holdHours %>h hold</span></div>
+        <div class="flow-node"><div class="upper">05</div><strong>Withdrawable</strong><span class="xs muted">Request payout</span></div>
+      </div>
+    </div>
+
+    <!-- rate card -->
+    <div class="card mb-4">
+      <div class="card-head">
+        <div>
+          <span class="card-title">Current rate card</span>
+          <p class="xs muted mt-1">Gross CPM per 1,000 valid visits, before your <%= shares.publisher %>% share is applied.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Country</th><th>Device</th><th class="num">Gross CPM</th>
+              <th class="num">Fill</th><th class="num">Your share / 1k</th><th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% rateCards.forEach(function (r) {
+                 const yours = Math.round(r.cpm_micros * r.fill_rate * (shares.publisher / 100)); %>
+              <tr>
+                <td><%= r.country === '*' ? '🌐 All others' : countryFlag(r.country) + ' ' + countryName(r.country) %></td>
+                <td><%= r.device === '*' ? 'Any' : r.device %></td>
+                <td class="num"><%= usd(r.cpm_micros, 3) %></td>
+                <td class="num"><%= Math.round(r.fill_rate * 100) %>%</td>
+                <td class="num" style="font-weight:700;color:var(--ok)"><%= usd(yours, 3) %></td>
+                <td class="small muted"><%= r.note || '—' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="alert alert-warn mb-4">
+      <span class="alert-mark">⚠</span>
+      <div>
+        <strong>These figures are planning estimates, not a promise.</strong>
+        <p class="small mt-1"><%= disclaimer %></p>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="grid g2">
+      <% const faqs = [
+        ['When does an earning become withdrawable?', `Earnings land in <strong>pending</strong> immediately on completion, then release to your withdrawable balance after ${holdHours} hours. The hold exists so a fraud sweep can reverse bad traffic before it is paid out.`],
+        ['What counts as a valid visit?', 'A visit that passes entry scoring (not a bot, not a preview crawler, not on a blocklist, not an IP burst) and then completes the flow with human-plausible timing and interaction. Invalid visits still reach the destination — they simply earn nothing.'],
+        ['Why did a visit earn less than the rate card?', 'Traffic scoring between the review and reject thresholds is paid at a reduced rate rather than dropped entirely, which mirrors how ad networks discount low-quality inventory.'],
+        ['How are referrals paid?', `Your referral share comes out of the platform's cut, not your referral's earnings. They lose nothing by signing up under you, and it is lifetime.`],
+        ['What are the payout methods?', 'Whatever the operator of this deployment has configured. Set your method and address under Dashboard → Settings, then request a withdrawal from the Earnings page.'],
+        ['Can my account be suspended?', 'Yes — for sustained invalid traffic, for distributing content that violates the Terms, or on a valid DMCA claim. Balances earned from fraudulent traffic are reversed.']
+      ] %>
+      <% faqs.forEach(function (f) { %>
+        <div class="card reveal">
+          <h3 style="font-size:1rem"><%= f[0] %></h3>
+          <p class="small mt-2"><%- f[1] %></p>
+        </div>
+      <% }); %>
+    </div>
+
+    <div class="card tc mt-4" style="padding:44px">
+      <h2>Ready to publish?</h2>
+      <p class="lead" style="margin:12px auto 0">Create an account, make a link, share it. That is the whole onboarding.</p>
+      <a href="/register" class="btn btn-primary btn-lg mt-3">Start earning free</a>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>
+<%- include('../partials/foot') %>

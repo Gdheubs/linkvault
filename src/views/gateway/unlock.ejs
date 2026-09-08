@@ -1,0 +1,114 @@
+<%- include('../partials/head', { noindex: true, description: 'Your file is ready.' }) %>
+
+<div class="gw">
+  <div class="gw-top">
+    <div class="wrap row">
+      <a href="/" class="logo" style="font-size:1rem"><span class="logo-mark">LV</span><span><%= brand.name %></span></a>
+      <span class="pill" style="margin-left:auto"><span class="dot live"></span> Verified</span>
+    </div>
+  </div>
+
+  <div class="gw-body">
+    <div class="wrap-narrow">
+
+      <div class="unlock-hero">
+        <div class="unlock-mark">✓</div>
+        <h1 style="font-size:clamp(1.7rem,4vw,2.5rem)">Your file is ready</h1>
+        <p class="lead" style="margin:12px auto 0">
+          We issued a <strong>signed, one-time unlock token</strong> for this visit. It expires shortly, so collect your
+          file now.
+        </p>
+      </div>
+
+      <div class="card mt-4">
+        <% if (resource) { %>
+          <div class="file-card">
+            <div class="file-icon">
+              <%= resource.kind === 'video' ? '▶' : resource.kind === 'photo' ? '▣' : resource.kind === 'audio' ? '♪' : '▤' %>
+            </div>
+            <div class="grow" style="min-width:0">
+              <div style="font-weight:700" class="truncate"><%= resource.file_name %></div>
+              <div class="small muted"><%= fmtBytes(resource.size_bytes) %><%= resource.mime ? ' · ' + resource.mime : '' %></div>
+            </div>
+            <span class="badge badge-ok">Vaulted</span>
+          </div>
+
+          <div class="stack gap-2 mt-3">
+            <% if (telegramEnabled && tgLink) { %>
+              <a href="<%= tgLink.url %>" class="btn btn-primary btn-lg btn-block" rel="noopener">
+                Get my file on Telegram →
+              </a>
+              <p class="small tc muted">
+                The media bot verifies your token on its side before it releases the file. If Telegram does not open,
+                <a href="<%= tgLink.url %>" style="color:var(--brand)">use this link</a>.
+              </p>
+            <% } else { %>
+              <div class="alert alert-warn">
+                <span class="alert-mark">⚠</span>
+                <div>
+                  <strong>Delivery bot is not configured on this deployment.</strong><br>
+                  <span class="small">Set <code class="mono">TELEGRAM_BOT_TOKEN</code> and
+                  <code class="mono">TELEGRAM_BOT_USERNAME</code> in <code class="mono">.env</code>, then register the
+                  webhook from Admin → System.</span>
+                </div>
+              </div>
+            <% } %>
+          </div>
+
+        <% } else { %>
+          <div class="tc">
+            <div class="upper mb-1">Destination</div>
+            <div style="font-size:1.15rem;font-weight:700" class="truncate mb-3"><%= destinationHost || 'your link' %></div>
+            <a href="/d/<%= encodeURIComponent(token) %>" class="btn btn-primary btn-lg btn-block" rel="noopener">
+              Continue to <%= destinationHost || 'destination' %> →
+            </a>
+          </div>
+        <% } %>
+
+        <div class="divider"></div>
+        <dl class="kv">
+          <dt>Token type</dt><dd>HMAC-SHA256 signed</dd>
+          <dt>Valid for</dt><dd><%= Math.round(config.monetization.completionTokenTtlSec / 60) %> minutes</dd>
+          <dt>Max uses</dt><dd><%= config.monetization.completionMaxUses %></dd>
+        </dl>
+      </div>
+
+      <%- adsHtml %>
+      <%- promosHtml %>
+
+      <% if (products && products.length) { %>
+        <h3 class="mt-4 mb-2">Tools from our team</h3>
+        <div class="grid g3">
+          <% products.forEach(function (p) { %>
+            <a href="/products/<%= p.slug %>" class="card card-tight card-hover">
+              <div class="row gap-2 mb-1">
+                <strong style="font-size:.92rem"><%= p.name %></strong>
+                <% if (p.badge) { %><span class="badge badge-brand"><%= p.badge %></span><% } %>
+              </div>
+              <p class="xs"><%= p.tagline %></p>
+            </a>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <% if (posts && posts.length) { %>
+        <h3 class="mt-4 mb-2">Read next</h3>
+        <div class="grid g3">
+          <% posts.forEach(function (p) { %>
+            <a href="/blog/<%= p.slug %>" class="card card-tight card-hover">
+              <strong style="font-size:.9rem;line-height:1.35;display:block" class="mb-1"><%= p.title %></strong>
+              <p class="xs"><%= truncate(p.excerpt, 90) %></p>
+            </a>
+          <% }); %>
+        </div>
+      <% } %>
+
+      <div class="tc mt-5">
+        <a href="/register" class="btn btn-ghost">Share your own files and earn →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
+<%- include('../partials/foot') %>

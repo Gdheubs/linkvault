@@ -1,0 +1,133 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>Monetization flows</h1>
+        <p class="muted">Platform-wide step flows. Publishers can also build their own.</p>
+      </div>
+      <button class="btn btn-primary" data-modal-open="flowModal">+ New flow</button>
+    </div>
+
+    <div class="alert <%= globalSkipMode === 'ad_click' ? 'alert-warn' : 'alert-info' %> mb-3">
+      <span class="alert-mark"><%= globalSkipMode === 'ad_click' ? '⚠' : 'ℹ' %></span>
+      <div>
+        <strong>Global skip mode: <code class="mono"><%= globalSkipMode %></code></strong>
+        <p class="small mt-1">
+          <% if (globalSkipMode === 'ad_click') { %>
+            Visitors are rewarded for interacting with an ad. That is an <strong>incentivised click</strong>, which the
+            Google AdSense program policies prohibit — running it on AdSense inventory risks your account. Use it only
+            with an ad network whose terms allow it. Change it under System → Settings.
+          <% } else if (globalSkipMode === 'engagement') { %>
+            The skip button unlocks after the visitor genuinely engages with the <em>page content</em>, not with an ad.
+            This is the AdSense-safe default: the reward is tied to reading, and ad placement stays incidental.
+          <% } else { %>
+            No skip is offered — the countdown must run out on every step.
+          <% } %>
+          A per-flow value overrides nothing while a global value is set.
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">All flows</span><span class="badge"><%= list.length %></span></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Flow</th><th>Owner</th><th class="num">Steps</th><th class="num">Wait</th>
+                <th>Skip</th><th class="num">Priority</th><th class="num">Links</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            <% list.forEach(function (c) {
+                 let steps = []; try { steps = JSON.parse(c.steps); } catch (e) { steps = []; } %>
+              <tr>
+                <td>
+                  <div style="font-weight:600"><%= c.name %></div>
+                  <div class="row gap-1 wrapf mt-1">
+                    <% steps.slice(0, 5).forEach(function (s, i) { %>
+                      <span class="badge xs"><%= i + 1 %>·<%= s.kind %></span>
+                    <% }); %>
+                  </div>
+                </td>
+                <td class="small"><%= c.owner_email ? truncate(c.owner_email, 20) : '<span class="badge badge-brand">Platform</span>' %></td>
+                <td class="num"><%= steps.length %></td>
+                <td class="num"><%= c.wait_seconds %>s</td>
+                <td><span class="badge <%= c.skip_mode === 'ad_click' ? 'badge-warn' : '' %>"><%= c.skip_mode %></span></td>
+                <td class="num"><%= c.priority %></td>
+                <td class="num"><%= num(c.link_count) %></td>
+                <td><span class="badge <%= c.status === 'active' ? 'badge-ok' : 'badge-warn' %>"><%= c.status %></span></td>
+                <td>
+                  <div class="row gap-1">
+                    <% if (!c.owner_id) { %>
+                      <button class="btn btn-xs" data-modal-open="flowModal" data-fill-form="#adminFlowForm"
+                        data-fill='<%- JSON.stringify({ id: c.id, name: c.name, wait_seconds: c.wait_seconds, skip_mode: c.skip_mode, targeting: c.targeting, priority: c.priority, status: c.status, steps: c.steps }) %>'>Edit</button>
+                    <% } %>
+                    <form method="post" action="/admin/campaigns/<%= c.id %>/delete" data-confirm="Delete this flow? Links using it fall back to the default.">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <button class="btn btn-xs btn-danger">×</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mt-3" style="background:var(--surface-2)">
+      <div class="upper mb-2">Targeting JSON</div>
+      <div class="prose"><pre><code>{
+  "countries": ["US", "GB", "CA"],     // flow only applies to these (omit for all)
+  "devices": ["mobile"],               // and/or these devices
+  "step_override": { "US": 2, "mobile": 2 }   // shorten the flow for this segment
+}</code></pre></div>
+      <p class="xs muted">
+        <code class="mono">step_override</code> keeps the first n−1 steps plus the final verify step, so the flow
+        always terminates correctly. Country keys are checked before device keys.
+      </p>
+    </div>
+  </main>
+</div>
+
+<div class="modal-back" id="flowModal">
+  <div class="modal" style="width:min(100%,760px)">
+    <div class="modal-head"><strong>Platform flow</strong><button class="modal-close" data-modal-close>×</button></div>
+    <div class="modal-body">
+      <form method="post" action="/admin/campaigns" id="adminFlowForm" class="form-grid">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="id">
+        <div class="form-grid two">
+          <div class="field"><label class="label">Name</label><input class="input" name="name" required maxlength="80"></div>
+          <div class="field"><label class="label">Default wait (s)</label><input class="input" name="wait_seconds" type="number" min="0" max="120" value="15"></div>
+        </div>
+        <div class="form-grid two">
+          <div class="field">
+            <label class="label">Skip mode</label>
+            <select class="select" name="skip_mode">
+              <option value="none" selected>none — timer only (default, AdSense-safe)</option>
+              <option value="engagement">engagement — early skip on content engagement (AdSense-safe)</option>
+              <option value="ad_click">ad_click — early skip on an ad click (NOT AdSense-compliant)</option>
+            </select>
+          </div>
+          <div class="field"><label class="label">Priority</label><input class="input" name="priority" type="number" min="0" max="1000" value="0"></div>
+        </div>
+        <div class="form-grid two">
+          <div class="field">
+            <label class="label">Status</label>
+            <select class="select" name="status"><option value="active">active</option><option value="paused">paused</option></select>
+          </div>
+          <div class="field"><label class="label">Targeting (JSON)</label><input class="input mono" name="targeting" placeholder="{}"></div>
+        </div>
+        <div class="field">
+          <label class="label">Steps (JSON array, max 8)</label>
+          <textarea class="textarea code" name="steps" required style="min-height:280px"><%= JSON.stringify(defaultSteps, null, 2) %></textarea>
+        </div>
+        <button class="btn btn-primary btn-lg">Save flow</button>
+      </form>
+    </div>
+  </div>
+</div>
+<%- include('../partials/foot') %>

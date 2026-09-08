@@ -1,0 +1,206 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+
+<div class="app">
+  <%- include('../partials/adminside') %>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>Platform overview</h1>
+        <p class="muted">Everything happening across <%= brand.name %>.</p>
+      </div>
+      <div class="rangebar">
+        <% [7, 30, 90].forEach(function (d) { %>
+          <a href="?days=<%= d %>" class="<%= days === d ? 'on' : '' %>"><%= d %>d</a>
+        <% }); %>
+      </div>
+    </div>
+
+    <!-- readiness -->
+    <div class="grid g2 mb-3">
+      <div class="alert <%= adsenseReady ? 'alert-ok' : 'alert-warn' %>">
+        <span class="alert-mark"><%= adsenseReady ? '✓' : '⚠' %></span>
+        <div class="grow">
+          <strong>AdSense: <%= adsenseReady ? 'live' : 'not serving' %></strong>
+          <p class="small mt-1">
+            <%= adsenseReady
+              ? 'Real ad units are rendering in every adsense-provider slot.'
+              : 'Slots render sized placeholders. Set ADSENSE_CLIENT and ADSENSE_ENABLED=true once your site is approved.' %>
+          </p>
+        </div>
+        <a href="/admin/ads" class="btn btn-xs">Inventory</a>
+      </div>
+
+      <div class="alert <%= telegramReady ? 'alert-ok' : 'alert-warn' %>">
+        <span class="alert-mark"><%= telegramReady ? '✓' : '⚠' %></span>
+        <div class="grow">
+          <strong>Media bot: <%= telegramReady ? 'configured' : 'offline' %></strong>
+          <p class="small mt-1">
+            <%= telegramReady
+              ? 'File delivery is available. Register the webhook from System if you have not yet.'
+              : 'Set TELEGRAM_BOT_TOKEN to enable vault storage and file delivery.' %>
+          </p>
+        </div>
+        <a href="/admin/system" class="btn btn-xs">System</a>
+      </div>
+    </div>
+
+    <!-- pulse -->
+    <div class="grid g4 mb-3">
+      <div class="card stat">
+        <div class="stat-label">Visits, 24h</div>
+        <div class="stat-value"><%= num(pulse.visits24h) %></div>
+        <div class="stat-sub"><%= num(pulse.completed24h) %> completed (<%= pct(pulse.completed24h, pulse.visits24h) %>)</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Publishers</div>
+        <div class="stat-value"><%= num(pulse.users) %></div>
+        <div class="stat-sub"><span class="delta up">+<%= num(pulse.newUsers24h) %></span> in 24h</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Owed to publishers</div>
+        <div class="stat-value"><%= usd(pulse.owedMicros) %></div>
+        <div class="stat-sub">balance + pending across all accounts</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Fraud events, 24h</div>
+        <div class="stat-value" style="color:<%= pulse.fraud24h > 100 ? 'var(--danger)' : 'inherit' %>"><%= num(pulse.fraud24h) %></div>
+        <div class="stat-sub"><a href="/admin/fraud" style="color:var(--brand)">Review →</a></div>
+      </div>
+    </div>
+
+    <div class="grid g4 mb-3">
+      <div class="card card-tight"><div class="upper">Links</div><div style="font-size:1.35rem;font-weight:800;margin-top:4px"><%= num(pulse.links) %></div></div>
+      <div class="card card-tight"><div class="upper">Vault files</div><div style="font-size:1.35rem;font-weight:800;margin-top:4px"><%= num(pulse.resources) %></div></div>
+      <div class="card card-tight">
+        <div class="upper">Payouts pending</div>
+        <div style="font-size:1.35rem;font-weight:800;margin-top:4px"><%= usd(pulse.pendingPayoutMicros) %></div>
+        <div class="xs muted"><%= num(pulse.pendingPayouts) %> request<%= pulse.pendingPayouts === 1 ? '' : 's' %></div>
+      </div>
+      <div class="card card-tight">
+        <div class="upper">Open messages</div>
+        <div style="font-size:1.35rem;font-weight:800;margin-top:4px"><%= num(pulse.openTickets) %></div>
+        <div class="xs muted"><a href="/admin/content" style="color:var(--brand)">Inbox →</a></div>
+      </div>
+    </div>
+
+    <!-- charts -->
+    <div class="grid g-side mb-3">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Platform traffic</span>
+          <div class="row gap-3 xs muted">
+            <span class="row gap-1"><i class="legend-key" style="background:var(--brand)"></i> Clicks</span>
+            <span class="row gap-1"><i class="legend-key" style="background:var(--brand-3)"></i> Completions</span>
+          </div>
+        </div>
+        <div class="chart-wrap" data-chart='<%- JSON.stringify({ type:"area", x:"label", y:"clicks", y2:"completed_visits", yLabel:"Clicks", y2Label:"Completions", series }) %>'></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Top fraud signals, 7d</span></div>
+        <% if (!fraudTop.length) { %>
+          <div class="empty"><div class="empty-mark">✓</div>No fraud signals recorded.</div>
+        <% } else { %>
+          <div class="barlist">
+            <% const topF = Math.max.apply(null, fraudTop.map(function(f){return f.count})) || 1; %>
+            <% fraudTop.forEach(function (f) { %>
+              <div class="barlist-row">
+                <div class="barlist-name"><span class="mono xs"><%= f.key %></span></div>
+                <div class="barlist-val"><%= num(f.count) %></div>
+                <div class="barlist-track meter-warn"><i data-meter="<%= Math.round((f.count / topF) * 100) %>" style="width:0;background:linear-gradient(90deg,#ffc061,#ff6b81)"></i></div>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="grid g2 mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Top publishers by earnings</span><a href="/admin/users" class="btn btn-xs btn-ghost">All users</a></div>
+        <% if (!topPublishers.length) { %>
+          <div class="empty"><div class="empty-mark">◍</div>No publisher earnings in this range.</div>
+        <% } else { %>
+          <div class="table-wrap" style="border:0">
+            <table>
+              <thead><tr><th>Publisher</th><th class="num">Clicks</th><th class="num">Score</th><th class="num">Earned</th></tr></thead>
+              <tbody>
+                <% topPublishers.forEach(function (p) { %>
+                  <tr>
+                    <td>
+                      <a href="/admin/users/<%= p.id %>" class="row gap-2">
+                        <span class="avatar"><%= (p.name || p.email).slice(0,1).toUpperCase() %></span>
+                        <div style="min-width:0">
+                          <div style="font-weight:600" class="truncate"><%= p.name || p.email.split('@')[0] %></div>
+                          <div class="xs muted truncate"><%= p.email %></div>
+                        </div>
+                      </a>
+                    </td>
+                    <td class="num"><%= num(p.clicks) %></td>
+                    <td class="num">
+                      <span class="badge <%= p.fraud_score >= 60 ? 'badge-danger' : p.fraud_score >= 35 ? 'badge-warn' : 'badge-ok' %>"><%= p.fraud_score %></span>
+                    </td>
+                    <td class="num" style="color:var(--ok);font-weight:600"><%= usd(p.earned) %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Top countries</span></div>
+        <% if (!countries.length) { %>
+          <div class="empty"><div class="empty-mark">🌐</div>No traffic yet.</div>
+        <% } else { %>
+          <div class="barlist">
+            <% const topC = Math.max.apply(null, countries.map(function(c){return c.clicks})) || 1; %>
+            <% countries.forEach(function (c) { %>
+              <div class="barlist-row">
+                <div class="barlist-name"><span><%= countryFlag(c.key) %> <%= countryName(c.key) %></span></div>
+                <div class="barlist-val"><%= num(c.clicks) %></div>
+                <div class="barlist-track"><i data-meter="<%= Math.round((c.clicks / topC) * 100) %>" style="width:0"></i></div>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Latest fraud events</span><a href="/admin/fraud" class="btn btn-xs btn-ghost">Full log</a></div>
+      <% if (!recentFraud.length) { %>
+        <div class="empty"><div class="empty-mark">✓</div>Clean — nothing flagged.</div>
+      <% } else { %>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>When</th><th>Publisher</th><th>Signals</th><th class="num">Severity</th></tr></thead>
+            <tbody>
+              <% recentFraud.forEach(function (f) { %>
+                <tr>
+                  <td class="small muted"><%= timeAgo(f.created_at) %></td>
+                  <td class="small"><%= f.email || '—' %></td>
+                  <td>
+                    <div class="row gap-1 wrapf">
+                      <% String(f.reason).split(',').slice(0,4).forEach(function (r) { %>
+                        <span class="badge xs"><%= r %></span>
+                      <% }); %>
+                    </div>
+                  </td>
+                  <td class="num">
+                    <span class="badge <%= f.severity >= 3 ? 'badge-danger' : f.severity === 2 ? 'badge-warn' : '' %>"><%= f.severity %></span>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+
+<%- include('../partials/foot') %>

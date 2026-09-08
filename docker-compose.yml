@@ -1,0 +1,27 @@
+# For local container testing, or a plain VPS deploy behind Caddy/nginx.
+services:
+  linkvault:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      TRUST_PROXY: "1"
+      DB_FILE: /app/data/linkvault.db
+      BASE_URL: ${BASE_URL:-http://localhost:3000}
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      TOKEN_SECRET: ${TOKEN_SECRET:?set TOKEN_SECRET in .env}
+      HASH_SALT: ${HASH_SALT:?set HASH_SALT in .env}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      TELEGRAM_STORAGE_CHAT_ID: ${TELEGRAM_STORAGE_CHAT_ID:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      ADSENSE_CLIENT: ${ADSENSE_CLIENT:-}
+      ADSENSE_ENABLED: ${ADSENSE_ENABLED:-false}
+    volumes:
+      # The whole app lives here. Back this up.
+      - linkvault-data:/app/data
+
+volumes:
+  linkvault-data:

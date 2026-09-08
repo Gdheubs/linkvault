@@ -1,0 +1,90 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <div class="page-head">
+      <div><h1>Payouts</h1><p class="muted">Review and settle publisher withdrawal requests.</p></div>
+      <div class="rangebar">
+        <a href="/admin/payouts" class="<%= !status ? 'on' : '' %>">All</a>
+        <% ['pending','approved','paid','rejected'].forEach(function (s) { %>
+          <a href="?status=<%= s %>" class="<%= status === s ? 'on' : '' %>"><%= s %></a>
+        <% }); %>
+      </div>
+    </div>
+
+    <div class="grid g2 mb-3">
+      <div class="card stat"><div class="stat-label">Awaiting review</div>
+        <div class="stat-value" style="color:var(--warn)"><%= usd(totals.pending) %></div></div>
+      <div class="card stat"><div class="stat-label">Settled lifetime</div>
+        <div class="stat-value" style="color:var(--ok)"><%= usd(totals.paid) %></div></div>
+    </div>
+
+    <div class="card">
+      <% if (!payouts.length) { %>
+        <div class="empty"><div class="empty-mark">⇢</div>No payout requests<%= status ? ` with status "${status}"` : '' %>.</div>
+      <% } else { %>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Requested</th><th>Publisher</th><th class="num">Score</th><th>Method</th>
+                  <th>Address</th><th class="num">Amount</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              <% payouts.forEach(function (p) { %>
+                <tr>
+                  <td class="small muted"><%= fmtDate(p.created_at) %><div class="xs"><%= timeAgo(p.created_at) %></div></td>
+                  <td>
+                    <a href="/admin/users/<%= p.user_id %>" style="color:var(--brand);font-weight:600"><%= truncate(p.name || p.email, 22) %></a>
+                    <div class="xs muted truncate" style="max-width:160px"><%= p.email %></div>
+                  </td>
+                  <td class="num">
+                    <span class="badge <%= p.fraud_score >= 60 ? 'badge-danger' : p.fraud_score >= 35 ? 'badge-warn' : 'badge-ok' %>"><%= p.fraud_score %></span>
+                  </td>
+                  <td class="small"><%= p.method %></td>
+                  <td class="mono xs truncate" style="max-width:170px"><%= p.address %></td>
+                  <td class="num" style="font-weight:700"><%= usd(p.amount_micros) %></td>
+                  <td>
+                    <span class="badge <%= p.status === 'paid' ? 'badge-ok' : p.status === 'rejected' ? 'badge-danger' : p.status === 'approved' ? 'badge-info' : 'badge-warn' %>">
+                      <%= p.status %>
+                    </span>
+                    <% if (p.note) { %><div class="xs muted mt-1 truncate" style="max-width:130px"><%= p.note %></div><% } %>
+                  </td>
+                  <td>
+                    <% if (p.status !== 'paid') { %>
+                      <form method="post" action="/admin/payouts/<%= p.id %>/status" class="stack gap-1"
+                            data-confirm="Apply this payout decision? Rejecting refunds the amount to the publisher's balance.">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <div class="row gap-1">
+                          <select class="select" name="status" style="padding:4px 24px 4px 8px;font-size:.76rem">
+                            <option value="approved">approve</option>
+                            <option value="paid">mark paid</option>
+                            <option value="rejected">reject</option>
+                          </select>
+                          <button class="btn btn-xs">Go</button>
+                        </div>
+                        <input class="input" name="note" placeholder="Note / TX id" maxlength="200" style="padding:4px 8px;font-size:.76rem">
+                      </form>
+                    <% } else { %>
+                      <span class="xs muted">Settled <%= timeAgo(p.processed_at) %></span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card mt-3" style="background:var(--surface-2)">
+      <div class="upper mb-2">How the money moves</div>
+      <div class="grid g3">
+        <div><strong class="small">On request</strong><p class="xs mt-1">The amount is debited from the publisher's balance immediately and a ledger entry is written. They cannot spend it twice.</p></div>
+        <div><strong class="small">On reject</strong><p class="xs mt-1">The amount is credited straight back with a second ledger entry carrying your note.</p></div>
+        <div><strong class="small">On paid</strong><p class="xs mt-1">Lifetime paid total goes up. Send the actual money through your payment provider — this panel records, it does not transfer.</p></div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>

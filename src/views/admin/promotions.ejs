@@ -1,0 +1,196 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>Promotions</h1>
+        <p class="muted">Paid placements sold to bloggers and creators. Review, invoice, activate.</p>
+      </div>
+      <a href="/promote" target="_blank" rel="noopener" class="btn btn-sm btn-ghost">View public page ↗</a>
+    </div>
+
+    <div class="grid g4 mb-3">
+      <div class="card stat">
+        <div class="stat-label">Awaiting review</div>
+        <div class="stat-value" style="color:var(--warn)"><%= num(counts.pending) %></div>
+        <div class="stat-sub">submitted, not yet approved</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Approved, unpaid</div>
+        <div class="stat-value" style="color:var(--info)"><%= num(counts.awaitingPayment) %></div>
+        <div class="stat-sub"><%= usd(counts.awaitingMicros) %> invoiced</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Live now</div>
+        <div class="stat-value" style="color:var(--ok)"><%= num(counts.active) %></div>
+        <div class="stat-sub">rotating on the site</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Collected</div>
+        <div class="stat-value"><%= usd(counts.paidMicros) %></div>
+        <div class="stat-sub">lifetime promotion revenue</div>
+      </div>
+    </div>
+
+    <div class="row gap-2 wrapf mb-3">
+      <div class="rangebar">
+        <a href="/admin/promotions" class="<%= !status ? 'on' : '' %>">All</a>
+        <% ['draft','pending','approved','active','expired','rejected'].forEach(function (s) { %>
+          <a href="?status=<%= s %>" class="<%= status === s ? 'on' : '' %>"><%= s %></a>
+        <% }); %>
+      </div>
+      <form method="post" action="/admin/promotions/sweep" style="margin-left:auto">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button class="btn btn-sm">Run lifecycle sweep</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <% if (!list.length) { %>
+        <div class="empty">
+          <div class="empty-mark">◈</div>
+          No promotions<%= status ? ` with status "${status}"` : ' yet' %>.
+          <p class="small mt-1">Submissions from <a href="/promote" style="color:var(--brand)">/promote</a> land here.</p>
+        </div>
+      <% } else { %>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Promotion</th><th>Advertiser</th><th>Package</th>
+                <th class="num">Fee</th><th class="num">Impr.</th><th class="num">Clicks</th><th class="num">CTR</th>
+                <th>Runs</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% list.forEach(function (p) { %>
+                <tr>
+                  <td style="max-width:260px">
+                    <div class="row gap-2">
+                      <span class="badge <%= p.kind === 'youtube' ? 'badge-danger' : 'badge-info' %>">
+                        <%= p.kind === 'youtube' ? '▶' : p.kind === 'product' ? '▣' : '✦' %> <%= p.kind %>
+                      </span>
+                    </div>
+                    <div style="font-weight:600" class="mt-1"><%= truncate(p.title, 46) %></div>
+                    <% if (p.url) { %>
+                      <a href="<%= p.url %>" target="_blank" rel="noopener nofollow" class="xs muted truncate"
+                         style="display:block;max-width:240px"><%= hostOf(p.url) || p.url %> ↗</a>
+                    <% } %>
+                    <% if (p.youtube_id) { %><span class="code-chip"><%= p.youtube_id %></span><% } %>
+                  </td>
+                  <td class="small">
+                    <div style="font-weight:600"><%= truncate(p.advertiser || '—', 18) %></div>
+                    <a href="mailto:<%= p.email %>" class="xs" style="color:var(--brand)"><%= truncate(p.email, 22) %></a>
+                    <div class="xs mt-1">
+                      <% if (p.user_id) { %>
+                        <a href="/admin/users/<%= p.user_id %>" class="badge badge-info">self-serve #<%= p.user_id %></a>
+                      <% } else { %>
+                        <span class="badge">form submission</span>
+                      <% } %>
+                    </div>
+                  </td>
+                  <td class="small">
+                    <span class="badge"><%= p.package || '—' %></span>
+                    <div class="xs muted mt-1"><%= p.days %>d · <%= p.placement %></div>
+                  </td>
+                  <td class="num" style="font-weight:700"><%= usd(p.price_micros) %></td>
+                  <td class="num"><%= num(p.impressions) %></td>
+                  <td class="num"><%= num(p.clicks) %></td>
+                  <td class="num"><%= pct(p.clicks, p.impressions, 2) %></td>
+                  <td class="small muted">
+                    <% if (p.starts_at) { %>
+                      <%= fmtDate(p.starts_at) %><br><span class="xs">to <%= p.ends_at ? fmtDate(p.ends_at) : '—' %></span>
+                    <% } else { %>—<% } %>
+                  </td>
+                  <td>
+                    <span class="badge <%= p.status === 'active' ? 'badge-ok' : p.status === 'rejected' ? 'badge-danger' : p.status === 'expired' ? '' : 'badge-warn' %>">
+                      <%= p.status %>
+                    </span>
+                    <div class="xs mt-1">
+                      <span class="badge <%= p.paid ? 'badge-ok' : '' %>"><%= p.paid ? 'paid' : 'unpaid' %></span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="stack gap-1">
+                      <form method="post" action="/admin/promotions/<%= p.id %>/status" class="row gap-1">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <select class="select" name="status" style="padding:4px 22px 4px 7px;font-size:.74rem">
+                          <% ['draft','pending','approved','active','paused','expired','rejected'].forEach(function (s) { %>
+                            <option value="<%= s %>" <%= p.status === s ? 'selected' : '' %>><%= s %></option>
+                          <% }); %>
+                        </select>
+                        <button class="btn btn-xs">Set</button>
+                      </form>
+                      <form method="post" action="/admin/promotions/<%= p.id %>/paid" class="row gap-1">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <input class="input" name="payment_ref" placeholder="Payment ref"
+                               value="<%= p.payment_ref %>" style="padding:4px 7px;font-size:.74rem;width:96px">
+                        <button class="btn btn-xs <%= p.paid ? '' : 'btn-ok' %>"><%= p.paid ? 'Update' : 'Mark paid' %></button>
+                      </form>
+                      <form method="post" action="/admin/promotions/<%= p.id %>/delete"
+                            data-confirm="Delete this promotion permanently?">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-xs btn-danger btn-block">Delete</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                <% if (p.note) { %>
+                  <tr><td colspan="10" class="xs muted" style="padding-top:0">
+                    <strong>Note:</strong> <%= p.note %>
+                  </td></tr>
+                <% } %>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- ── packages editor ───────────────────────────────────────────── -->
+    <div class="card mt-3">
+      <div class="card-head">
+        <div>
+          <span class="card-title">Packages</span>
+          <p class="xs muted mt-1">What advertisers see on /promote. Edit as JSON; leave blank to use the built-in set.</p>
+        </div>
+      </div>
+      <form method="post" action="/admin/promotions/packages" class="form-grid">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field">
+          <textarea class="textarea code" name="packages" style="min-height:280px"><%= packagesJson %></textarea>
+          <span class="hint">
+            Each entry: <code class="mono">key, name, price (USD), days, placement (gateway|blog|site|everywhere),
+            weight, blurb, perks[], featured</code>. Higher <code class="mono">weight</code> means more rotation share.
+          </span>
+        </div>
+        <div class="row gap-2">
+          <button class="btn btn-primary">Save packages</button>
+          <button class="btn btn-ghost" name="reset" value="1"
+                  formnovalidate data-confirm="Reset to the built-in packages?">Reset to defaults</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card mt-3" style="background:var(--surface-2)">
+      <div class="upper mb-2">How the lifecycle works</div>
+      <div class="grid g4">
+        <div><strong class="small">pending</strong><p class="xs mt-1">Just submitted. Nothing is shown and nothing is charged.</p></div>
+        <div><strong class="small">approved</strong><p class="xs mt-1">You've vetted it and sent an invoice. Still not shown.</p></div>
+        <div><strong class="small">paid → active</strong><p class="xs mt-1">Marking it paid promotes it to active on the next sweep, and sets the start and end dates.</p></div>
+        <div><strong class="small">expired</strong><p class="xs mt-1">Past its end date. Drops out of rotation automatically.</p></div>
+      </div>
+      <div class="grid g2 mt-2">
+        <div><strong class="small">draft</strong><p class="xs mt-1">Created through the self-serve API or dashboard but not yet funded from ad credit. Invisible and uncharged.</p></div>
+        <div><strong class="small">rejected</strong><p class="xs mt-1">Refused in review. If it was funded and had not gone live, the fee is returned to the advertiser's ad credit automatically.</p></div>
+      </div>
+      <p class="xs muted mt-2">
+        The sweep runs automatically every 15 minutes; the button above forces a pass. Only
+        <strong>active + paid</strong> promotions are ever rendered.
+      </p>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>

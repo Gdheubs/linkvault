@@ -1,0 +1,131 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+
+<div class="app">
+  <%- include('../partials/side') %>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>Monetization flows</h1>
+        <p class="muted">A flow is an ordered list of steps. Nothing is fixed at three pages — build one step or eight.</p>
+      </div>
+      <button class="btn btn-primary" data-modal-open="newFlow">+ New flow</button>
+    </div>
+
+    <!-- platform defaults -->
+    <div class="card mb-3">
+      <div class="card-head"><span class="card-title">Platform flows</span><span class="badge">Read only</span></div>
+      <div class="grid g2">
+        <% platform.forEach(function (c) {
+             let steps = []; try { steps = JSON.parse(c.steps); } catch (e) { steps = []; } %>
+          <div class="card card-tight" style="background:var(--surface-2)">
+            <div class="row between gap-2 mb-2">
+              <strong style="font-size:.92rem"><%= c.name %></strong>
+              <span class="badge badge-brand"><%= steps.length %> steps</span>
+            </div>
+            <dl class="kv">
+              <dt>Wait per step</dt><dd><%= c.wait_seconds %>s</dd>
+              <dt>Skip mode</dt><dd><%= c.skip_mode %></dd>
+            </dl>
+            <div class="row gap-1 wrapf mt-2">
+              <% steps.forEach(function (s, i) { %>
+                <span class="badge"><%= i + 1 %>. <%= s.kind %></span>
+              <% }); %>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+
+    <!-- own flows -->
+    <div class="card">
+      <div class="card-head"><span class="card-title">Your flows</span><span class="badge"><%= mine.length %>/10</span></div>
+      <% if (!mine.length) { %>
+        <div class="empty">
+          <div class="empty-mark">◎</div>
+          You have no custom flows. Links fall back to the platform default.
+          <div class="mt-2"><button class="btn btn-sm btn-primary" data-modal-open="newFlow">Build one</button></div>
+        </div>
+      <% } else { %>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th class="num">Steps</th><th class="num">Wait</th><th>Skip mode</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <% mine.forEach(function (c) {
+                   let steps = []; try { steps = JSON.parse(c.steps); } catch (e) { steps = []; } %>
+                <tr>
+                  <td style="font-weight:600"><%= c.name %></td>
+                  <td class="num"><%= steps.length %></td>
+                  <td class="num"><%= c.wait_seconds %>s</td>
+                  <td><span class="badge"><%= c.skip_mode %></span></td>
+                  <td><span class="badge <%= c.status === 'active' ? 'badge-ok' : 'badge-warn' %>"><%= c.status %></span></td>
+                  <td>
+                    <div class="row gap-1">
+                      <button class="btn btn-xs" data-modal-open="newFlow" data-fill-form="#flowForm"
+                        data-fill='<%- JSON.stringify({ id: c.id, name: c.name, wait_seconds: c.wait_seconds, skip_mode: c.skip_mode, steps: c.steps }) %>'>Edit</button>
+                      <form method="post" action="/dashboard/campaigns/<%= c.id %>/delete" data-confirm="Delete this flow?">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-xs btn-danger">Del</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+
+<div class="modal-back" id="newFlow">
+  <div class="modal" style="width:min(100%,720px)">
+    <div class="modal-head"><strong>Monetization flow</strong><button class="modal-close" data-modal-close>×</button></div>
+    <div class="modal-body">
+      <form method="post" action="/dashboard/campaigns" id="flowForm" class="form-grid">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="id">
+
+        <div class="form-grid two">
+          <div class="field">
+            <label class="label" for="f-name">Flow name</label>
+            <input class="input" id="f-name" name="name" required maxlength="80" placeholder="My 2-step flow">
+          </div>
+          <div class="field">
+            <label class="label" for="f-wait">Default wait per step (seconds)</label>
+            <input class="input" id="f-wait" name="wait_seconds" type="number" min="0" max="120" value="15">
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="f-skip">Skip mode</label>
+          <select class="select" id="f-skip" name="skip_mode">
+            <option value="none" selected>Timer only — the countdown must finish (default)</option>
+            <option value="engagement">Engagement — also allow an early skip once they've read the content</option>
+            <option value="ad_click">Ad interaction — allow an early skip on an ad click</option>
+          </select>
+          <span class="hint">
+            <strong>Heads up:</strong> "ad interaction" rewards a visitor for clicking an ad. That is an incentivised
+            click, which Google AdSense program policy prohibits. Use it only with a network that permits it.
+          </span>
+        </div>
+
+        <div class="field">
+          <label class="label" for="f-steps">Steps (JSON array)</label>
+          <textarea class="textarea code" id="f-steps" name="steps" required><%= JSON.stringify(defaultSteps, null, 2) %></textarea>
+          <span class="hint">
+            Each step: <code class="mono">key, kind (article|video|offer|quiz|verify), title, subtitle, wait,
+            slots[], require (scroll|click|none), cta, body</code>. Max 8 steps. <code class="mono">body</code> takes
+            markdown — real content here is what keeps the page ad-eligible.
+          </span>
+        </div>
+
+        <button class="btn btn-primary btn-lg">Save flow</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

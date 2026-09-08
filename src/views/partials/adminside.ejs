@@ -1,0 +1,35 @@
+<aside class="side">
+  <div class="side-group">
+    <div class="upper">Control</div>
+    <a href="/admin" class="<%= tab === 'overview' ? 'on' : '' %>"><span class="side-icon">◈</span> Overview</a>
+    <a href="/admin/traffic" class="<%= tab === 'traffic' ? 'on' : '' %>"><span class="side-icon">◔</span> Traffic</a>
+    <a href="/admin/fraud" class="<%= tab === 'fraud' ? 'on' : '' %>"><span class="side-icon">⚠</span> Anti-fraud</a>
+  </div>
+
+  <div class="side-group">
+    <div class="upper">Catalogue</div>
+    <a href="/admin/users" class="<%= tab === 'users' ? 'on' : '' %>"><span class="side-icon">◍</span> Users</a>
+    <a href="/admin/links" class="<%= tab === 'links' ? 'on' : '' %>"><span class="side-icon">⛓</span> Links</a>
+    <a href="/admin/files" class="<%= tab === 'files' ? 'on' : '' %>"><span class="side-icon">▤</span> File vault</a>
+  </div>
+
+  <div class="side-group">
+    <div class="upper">Money</div>
+    <a href="/admin/revenue" class="<%= tab === 'revenue' ? 'on' : '' %>"><span class="side-icon">$</span> Revenue</a>
+    <a href="/admin/payouts" class="<%= tab === 'payouts' ? 'on' : '' %>"><span class="side-icon">⇢</span> Payouts</a>
+  </div>
+
+  <div class="side-group">
+    <div class="upper">Monetization</div>
+    <a href="/admin/campaigns" class="<%= tab === 'campaigns' ? 'on' : '' %>"><span class="side-icon">◎</span> Ad flows</a>
+    <a href="/admin/ads" class="<%= tab === 'ads' ? 'on' : '' %>"><span class="side-icon">▣</span> Ad inventory</a>
+    <a href="/admin/promotions" class="<%= tab === 'promotions' ? 'on' : '' %>"><span class="side-icon">◈</span> Promotions</a>
+  </div>
+
+  <div class="side-group">
+    <div class="upper">Site</div>
+    <a href="/admin/content" class="<%= tab === 'content' ? 'on' : '' %>"><span class="side-icon">✎</span> Content</a>
+    <a href="/admin/system" class="<%= tab === 'system' ? 'on' : '' %>"><span class="side-icon">⚙</span> System</a>
+    <a href="/dashboard"><span class="side-icon">←</span> My dashboard</a>
+  </div>
+</aside>

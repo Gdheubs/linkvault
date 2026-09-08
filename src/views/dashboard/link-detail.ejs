@@ -1,0 +1,140 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+
+<div class="app">
+  <%- include('../partials/side') %>
+
+  <main class="main">
+    <a href="/dashboard/links" class="badge mb-2" style="display:inline-flex">← All links</a>
+
+    <div class="page-head">
+      <div>
+        <h1><%= link.title || link.code %></h1>
+        <div class="copy mt-2" style="max-width:420px">
+          <input readonly value="<%= baseUrl %>/s/<%= link.code %>">
+          <button type="button" class="btn btn-sm" data-copy="self">Copy</button>
+        </div>
+      </div>
+      <div class="row gap-2 wrapf">
+        <div class="rangebar">
+          <% [7, 30, 90].forEach(function (d) { %>
+            <a href="?days=<%= d %>" class="<%= days === d ? 'on' : '' %>"><%= d %>d</a>
+          <% }); %>
+        </div>
+        <a href="/s/<%= link.code %>" target="_blank" rel="noopener" class="btn btn-sm btn-ghost">Preview flow ↗</a>
+      </div>
+    </div>
+
+    <div class="grid g4 mb-3">
+      <div class="card stat"><div class="stat-label">Clicks</div><div class="stat-value"><%= num(link.clicks) %></div></div>
+      <div class="card stat"><div class="stat-label">Unique</div><div class="stat-value"><%= num(link.unique_clicks) %></div>
+        <div class="stat-sub"><%= pct(link.unique_clicks, link.clicks) %> of total</div></div>
+      <div class="card stat"><div class="stat-label">Completed</div><div class="stat-value"><%= num(link.completed_visits) %></div>
+        <div class="stat-sub"><%= pct(link.completed_visits, link.clicks) %> completion rate</div></div>
+      <div class="card stat"><div class="stat-label">Gross revenue</div>
+        <div class="stat-value" style="color:var(--ok)"><%= usd(link.revenue_micros) %></div></div>
+    </div>
+
+    <div class="grid g-side mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Traffic over time</span></div>
+        <div class="chart-wrap" data-chart='<%- JSON.stringify({ type:"area", x:"label", y:"clicks", y2:"completed_visits", yLabel:"Clicks", y2Label:"Completions", series }) %>'></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Link configuration</span></div>
+        <dl class="kv">
+          <dt>Short code</dt><dd class="mono"><%= link.code %></dd>
+          <dt>Target</dt>
+          <dd style="max-width:180px;overflow:hidden;text-overflow:ellipsis">
+            <%= link.resource_id ? '▤ ' + (link.file_name || 'vault file') : (link.destination ? hostOf(link.destination) : '—') %>
+          </dd>
+          <% if (link.resource_id) { %><dt>File size</dt><dd><%= fmtBytes(link.size_bytes) %></dd><% } %>
+          <dt>Flow</dt><dd><%= link.campaign_name || 'Platform default' %></dd>
+          <dt>Status</dt><dd><span class="badge <%= link.status === 'active' ? 'badge-ok' : 'badge-warn' %>"><%= link.status %></span></dd>
+          <dt>Created</dt><dd><%= fmtDate(link.created_at) %></dd>
+          <dt>Expires</dt><dd><%= link.expires_at ? fmtDate(link.expires_at) : 'Never' %></dd>
+          <dt>Click limit</dt><dd><%= link.max_clicks ? num(link.max_clicks) : 'Unlimited' %></dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="grid g2 mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Countries</span></div>
+        <% if (!countries.length) { %>
+          <div class="empty"><div class="empty-mark">🌐</div>No visits yet.</div>
+        <% } else { %>
+          <div class="barlist">
+            <% const topC = Math.max.apply(null, countries.map(function(c){return c.clicks})) || 1; %>
+            <% countries.forEach(function (c) { %>
+              <div class="barlist-row">
+                <div class="barlist-name"><span><%= countryFlag(c.key) %> <%= countryName(c.key) %></span></div>
+                <div class="barlist-val"><%= num(c.clicks) %> · <span style="color:var(--ok)"><%= usd(c.publisher_micros, 4) %></span></div>
+                <div class="barlist-track"><i data-meter="<%= Math.round((c.clicks / topC) * 100) %>" style="width:0"></i></div>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Devices</span></div>
+        <% if (!devices.length) { %>
+          <div class="empty"><div class="empty-mark">▭</div>No visits yet.</div>
+        <% } else { %>
+          <div class="row gap-3" style="align-items:center">
+            <div data-donut='<%- JSON.stringify({ slices: devices.map(function(d){ return { label: d.key, value: d.clicks }; }) }) %>'></div>
+            <div class="legend grow">
+              <% const totalDev = devices.reduce(function(s,d){return s+d.clicks},0) || 1; %>
+              <% const palette = ['var(--brand)','var(--brand-2)','var(--brand-3)']; %>
+              <% devices.forEach(function (d, i) { %>
+                <div class="legend-row">
+                  <i class="legend-key" style="background:<%= palette[i % palette.length] %>"></i>
+                  <span class="legend-name"><%= d.key %></span>
+                  <span class="legend-val"><%= pct(d.clicks, totalDev, 0) %></span>
+                </div>
+              <% }); %>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Recent visits</span></div>
+      <% if (!visits.length) { %>
+        <div class="empty"><div class="empty-mark">◔</div>No visits recorded for this link yet.</div>
+      <% } else { %>
+        <div class="table-wrap scroll-y">
+          <table>
+            <thead><tr><th>When</th><th>Country</th><th>Client</th><th>Referrer</th><th class="num">Score</th><th>Status</th><th class="num">Earned</th></tr></thead>
+            <tbody>
+              <% visits.forEach(function (v) { %>
+                <tr>
+                  <td class="small muted"><%= timeAgo(v.created_at) %></td>
+                  <td><%= countryFlag(v.country) %> <span class="small"><%= v.country %></span></td>
+                  <td class="small muted"><%= v.browser %> · <%= v.os %></td>
+                  <td class="small muted truncate" style="max-width:150px"><%= v.referer ? hostOf(v.referer) || 'direct' : 'direct' %></td>
+                  <td class="num">
+                    <span class="badge <%= v.fraud_score >= 60 ? 'badge-danger' : v.fraud_score >= 35 ? 'badge-warn' : 'badge-ok' %>">
+                      <%= v.fraud_score %>
+                    </span>
+                  </td>
+                  <td>
+                    <% if (v.is_completed && v.is_valid) { %><span class="badge badge-ok">Paid</span>
+                    <% } else if (v.is_completed) { %><span class="badge badge-warn">Unpaid</span>
+                    <% } else { %><span class="badge">Dropped</span><% } %>
+                  </td>
+                  <td class="num"><%= usd(v.publisher_micros, 4) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+
+<%- include('../partials/foot') %>

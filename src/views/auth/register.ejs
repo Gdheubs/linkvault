@@ -1,0 +1,46 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<section style="padding:6vh 0 10vh">
+  <div class="wrap" style="max-width:480px">
+    <div class="tc mb-3">
+      <h1 style="font-size:1.9rem">Start earning</h1>
+      <p class="small mt-1">Free account. No card, no minimum traffic.</p>
+    </div>
+    <div class="card">
+      <% if (error) { %>
+        <div class="alert alert-danger mb-3"><span class="alert-mark">⚠</span><div><%= error %></div></div>
+      <% } %>
+      <form method="post" action="/register" class="form-grid">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field">
+          <label class="label" for="r-name">Display name</label>
+          <input class="input" id="r-name" name="name" maxlength="80" autocomplete="name" value="<%= values.name || '' %>">
+        </div>
+        <div class="field">
+          <label class="label" for="r-email">Email</label>
+          <input class="input" id="r-email" name="email" type="email" required autocomplete="email" value="<%= values.email || '' %>">
+        </div>
+        <div class="field">
+          <label class="label" for="r-pw">Password</label>
+          <input class="input" id="r-pw" name="password" type="password" required autocomplete="new-password" minlength="8">
+          <span class="hint"><%= passwordRules %></span>
+        </div>
+        <div class="field">
+          <label class="label" for="r-ref">Referral code <span class="muted">(optional)</span></label>
+          <input class="input mono" id="r-ref" name="ref" maxlength="12" value="<%= values.ref || '' %>">
+        </div>
+        <label class="check">
+          <input type="checkbox" name="terms" value="1" required>
+          <span>I agree to the <a href="/terms" target="_blank" style="color:var(--brand)">Terms of Service</a>
+          and <a href="/privacy" target="_blank" style="color:var(--brand)">Privacy Policy</a>, and I confirm I will
+          not send bot or incentivised traffic.</span>
+        </label>
+        <button class="btn btn-primary btn-lg btn-block">Create my account</button>
+      </form>
+      <div class="divider"></div>
+      <p class="small tc muted">Already registered? <a href="/login" style="color:var(--brand)">Sign in</a></p>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>
+<%- include('../partials/foot') %>

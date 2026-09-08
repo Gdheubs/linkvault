@@ -1,0 +1,33 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<section style="padding:6vh 0 10vh">
+  <div class="wrap" style="max-width:440px">
+    <div class="tc mb-3">
+      <h1 style="font-size:1.9rem">Welcome back</h1>
+      <p class="small mt-1">Sign in to your publisher dashboard.</p>
+    </div>
+    <div class="card">
+      <% if (error) { %>
+        <div class="alert alert-danger mb-3"><span class="alert-mark">⚠</span><div><%= error %></div></div>
+      <% } %>
+      <form method="post" action="/login" class="form-grid">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="next" value="<%= next %>">
+        <div class="field">
+          <label class="label" for="l-email">Email</label>
+          <input class="input" id="l-email" name="email" type="email" required autocomplete="email"
+                 autofocus value="<%= values.email || '' %>">
+        </div>
+        <div class="field">
+          <label class="label" for="l-pw">Password</label>
+          <input class="input" id="l-pw" name="password" type="password" required autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary btn-lg btn-block">Sign in</button>
+      </form>
+      <div class="divider"></div>
+      <p class="small tc muted">No account? <a href="/register" style="color:var(--brand)">Create one free</a></p>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>
+<%- include('../partials/foot') %>

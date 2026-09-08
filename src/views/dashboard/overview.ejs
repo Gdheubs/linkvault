@@ -1,0 +1,230 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+
+<div class="app">
+  <%- include('../partials/side') %>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>Welcome back, <%= (me.name || me.email).split('@')[0] %></h1>
+        <p class="muted">Everything below covers the last <%= days %> days.</p>
+      </div>
+      <div class="row gap-2 wrapf">
+        <div class="rangebar">
+          <% [7, 30, 90].forEach(function (d) { %>
+            <a href="/dashboard?days=<%= d %>" class="<%= days === d ? 'on' : '' %>"><%= d %>d</a>
+          <% }); %>
+        </div>
+        <a href="/dashboard/links" class="btn btn-primary btn-sm">+ New link</a>
+      </div>
+    </div>
+
+    <% if (me.fraud_score >= 50) { %>
+      <div class="alert alert-warn mb-3">
+        <span class="alert-mark">⚠</span>
+        <div>
+          <strong>Your traffic quality score needs attention (<%= me.fraud_score %>/100).</strong>
+          <p class="small mt-1">A high score means a large share of your recent visits were flagged as invalid. Those
+          visits earn nothing, and sustained scores above 70 pause withdrawals. Check your traffic sources.</p>
+        </div>
+      </div>
+    <% } %>
+
+    <!-- ── headline tiles ─────────────────────────────────────────────── -->
+    <div class="grid g4 mb-3">
+      <div class="card stat reveal">
+        <div class="stat-label">Today's clicks</div>
+        <div class="stat-value"><%= num(summary.today.clicks) %></div>
+        <div class="stat-sub">
+          <% if (summary.deltaClicks > 0) { %><span class="delta up">▲ <%= num(summary.deltaClicks) %></span>
+          <% } else if (summary.deltaClicks < 0) { %><span class="delta down">▼ <%= num(Math.abs(summary.deltaClicks)) %></span>
+          <% } else { %><span class="delta flat">—</span><% } %>
+          vs yesterday
+        </div>
+        <div data-spark="<%= JSON.stringify(series.slice(-12).map(function(s){return s.clicks})) %>"></div>
+      </div>
+
+      <div class="card stat reveal">
+        <div class="stat-label">Valid visits</div>
+        <div class="stat-value"><%= num(summary.range.valid_visits) %></div>
+        <div class="stat-sub"><%= pct(summary.range.valid_visits, summary.range.clicks) %> of clicks passed scoring</div>
+        <div data-spark="<%= JSON.stringify(series.slice(-12).map(function(s){return s.valid_visits})) %>"></div>
+      </div>
+
+      <div class="card stat reveal">
+        <div class="stat-label">Estimated revenue</div>
+        <div class="stat-value"><%= usd(summary.range.revenue_micros) %></div>
+        <div class="stat-sub">gross, before your <%= shares.publisher %>% share</div>
+        <div data-spark="<%= JSON.stringify(series.slice(-12).map(function(s){return s.revenue_micros})) %>"></div>
+      </div>
+
+      <div class="card stat reveal">
+        <div class="stat-label">Your earnings</div>
+        <div class="stat-value" style="color:var(--ok)"><%= usd(summary.range.publisher_micros) %></div>
+        <div class="stat-sub">
+          <% if (summary.deltaEarnings > 0) { %><span class="delta up">▲ <%= usd(summary.deltaEarnings) %></span> today
+          <% } else { %><span class="delta flat"><%= usd(summary.today.publisher_micros) %></span> today<% } %>
+        </div>
+        <div data-spark="<%= JSON.stringify(series.slice(-12).map(function(s){return s.publisher_micros})) %>"></div>
+      </div>
+    </div>
+
+    <!-- ── balances ───────────────────────────────────────────────────── -->
+    <div class="grid g4 mb-3">
+      <div class="card card-tight">
+        <div class="upper">Withdrawable</div>
+        <div style="font-size:1.5rem;font-weight:800;letter-spacing:-.03em;margin:5px 0"><%= usd(me.balance_micros) %></div>
+        <div class="meter <%= me.balance_micros >= minPayout ? 'meter-ok' : '' %>">
+          <i data-meter="<%= Math.min(100, Math.round((me.balance_micros / minPayout) * 100)) %>" style="width:0"></i>
+        </div>
+        <div class="xs muted mt-1">
+          <%= me.balance_micros >= minPayout ? 'Ready to withdraw' : `${usd(minPayout - me.balance_micros)} to minimum` %>
+        </div>
+      </div>
+      <div class="card card-tight">
+        <div class="upper">Pending release</div>
+        <div style="font-size:1.5rem;font-weight:800;letter-spacing:-.03em;margin:5px 0"><%= usd(me.pending_micros) %></div>
+        <div class="xs muted">Releases <%= holdHours %>h after each completion</div>
+      </div>
+      <div class="card card-tight">
+        <div class="upper">Paid to date</div>
+        <div style="font-size:1.5rem;font-weight:800;letter-spacing:-.03em;margin:5px 0"><%= usd(me.paid_micros) %></div>
+        <div class="xs muted"><%= num(linkCount) %> links created</div>
+      </div>
+      <div class="card card-tight">
+        <div class="upper">Realised eCPM</div>
+        <div style="font-size:1.5rem;font-weight:800;letter-spacing:-.03em;margin:5px 0"><%= usd(ecpm, 3) %></div>
+        <div class="xs muted">Your actual earnings per 1,000 valid visits</div>
+      </div>
+    </div>
+
+    <!-- ── chart + breakdowns ─────────────────────────────────────────── -->
+    <div class="grid g-side mb-3">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Clicks &amp; earnings</span>
+          <div class="row gap-3 xs muted">
+            <span class="row gap-1"><i class="legend-key" style="background:var(--brand)"></i> Clicks</span>
+            <span class="row gap-1"><i class="legend-key" style="background:var(--brand-3)"></i> Completions</span>
+          </div>
+        </div>
+        <div class="chart-wrap" data-chart='<%- JSON.stringify({ type:"area", x:"label", y:"clicks", y2:"completed_visits", yLabel:"Clicks", y2Label:"Completions", series }) %>'></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Devices</span></div>
+        <% if (!devices.length) { %>
+          <p class="small muted">No device data yet.</p>
+        <% } else { %>
+          <div class="row gap-3" style="align-items:center">
+            <div data-donut='<%- JSON.stringify({ slices: devices.map(function(d){ return { label: d.key, value: d.clicks }; }) }) %>'></div>
+            <div class="legend grow">
+              <% const totalDev = devices.reduce(function(s,d){return s+d.clicks},0) || 1; %>
+              <% const palette = ['var(--brand)','var(--brand-2)','var(--brand-3)','var(--info)','var(--warn)']; %>
+              <% devices.forEach(function (d, i) { %>
+                <div class="legend-row">
+                  <i class="legend-key" style="background:<%= palette[i % palette.length] %>"></i>
+                  <span class="legend-name"><%= d.key %></span>
+                  <span class="legend-val"><%= pct(d.clicks, totalDev, 0) %></span>
+                </div>
+              <% }); %>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="grid g2 mb-3">
+      <!-- countries -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Top countries</span>
+          <a href="/dashboard/analytics" class="btn btn-xs btn-ghost">Details</a>
+        </div>
+        <% if (!countries.length) { %>
+          <div class="empty"><div class="empty-mark">🌐</div>No visits recorded yet.</div>
+        <% } else { %>
+          <div class="barlist">
+            <% const topC = Math.max.apply(null, countries.map(function(c){return c.clicks})) || 1; %>
+            <% countries.forEach(function (c) { %>
+              <div class="barlist-row">
+                <div class="barlist-name"><span><%= countryFlag(c.key) %> <%= countryName(c.key) %></span></div>
+                <div class="barlist-val"><%= num(c.clicks) %></div>
+                <div class="barlist-track"><i data-meter="<%= Math.round((c.clicks / topC) * 100) %>" style="width:0"></i></div>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- top links -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Best performing links</span>
+          <a href="/dashboard/links" class="btn btn-xs btn-ghost">All links</a>
+        </div>
+        <% if (!topLinks.length) { %>
+          <div class="empty">
+            <div class="empty-mark">⛓</div>
+            No links yet.
+            <div class="mt-2"><a href="/dashboard/links" class="btn btn-sm btn-primary">Create your first link</a></div>
+          </div>
+        <% } else { %>
+          <div class="stack gap-3">
+            <% topLinks.forEach(function (l) { %>
+              <a href="/dashboard/links/<%= l.id %>" class="row gap-3 between">
+                <div style="min-width:0">
+                  <div class="truncate" style="font-weight:600;font-size:.88rem">
+                    <%= l.title || l.destination || 'Vault file' %>
+                  </div>
+                  <div class="code-chip">/s/<%= l.code %></div>
+                </div>
+                <div class="tr" style="flex:none">
+                  <div style="font-weight:700;font-size:.88rem"><%= num(l.clicks) %></div>
+                  <div class="xs" style="color:var(--ok)"><%= usd(l.publisher_micros) %></div>
+                </div>
+              </a>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- ── recent activity ────────────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-head"><span class="card-title">Live visit feed</span><span class="pill"><span class="dot live"></span> Real time</span></div>
+      <% if (!recent.length) { %>
+        <div class="empty"><div class="empty-mark">◔</div>No visits yet. Share a link to see traffic land here.</div>
+      <% } else { %>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>When</th><th>Link</th><th>Location</th><th>Client</th><th>Status</th><th class="num">Earned</th></tr>
+            </thead>
+            <tbody>
+              <% recent.forEach(function (v) { %>
+                <tr>
+                  <td class="small muted"><%= timeAgo(v.created_at) %></td>
+                  <td><span class="code-chip">/s/<%= v.code %></span></td>
+                  <td><%= countryFlag(v.country) %> <span class="small"><%= countryName(v.country) %></span></td>
+                  <td class="small muted"><%= v.browser %> · <%= v.device %></td>
+                  <td>
+                    <% if (v.is_completed && v.is_valid) { %><span class="badge badge-ok">Paid</span>
+                    <% } else if (v.is_completed) { %><span class="badge badge-warn">Invalid</span>
+                    <% } else { %><span class="badge">In flow</span><% } %>
+                  </td>
+                  <td class="num" style="color:<%= v.publisher_micros ? 'var(--ok)' : 'var(--text-3)' %>">
+                    <%= usd(v.publisher_micros, 4) %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+
+<%- include('../partials/foot') %>

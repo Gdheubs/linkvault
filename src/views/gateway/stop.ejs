@@ -1,0 +1,24 @@
+<%- include('../partials/head', { noindex: true, description: message }) %>
+<div class="gw">
+  <div class="gw-top">
+    <div class="wrap row">
+      <a href="/" class="logo" style="font-size:1rem"><span class="logo-mark">LV</span><span><%= brand.name %></span></a>
+    </div>
+  </div>
+  <div class="gw-body">
+    <div class="wrap-narrow tc" style="padding-top:8vh">
+      <div style="font-size:3.4rem;opacity:.4;margin-bottom:14px">
+        <%= code === 404 ? '⌀' : code === 410 ? '⏱' : code === 423 ? '⏸' : '⚠' %>
+      </div>
+      <div class="badge mb-2">Error <%= code %></div>
+      <h1 style="font-size:clamp(1.5rem,4vw,2.2rem)"><%= heading %></h1>
+      <p class="lead" style="margin:14px auto 0"><%= message %></p>
+      <div class="row center gap-2 mt-4">
+        <a href="/" class="btn btn-primary">Go to homepage</a>
+        <a href="/contact" class="btn btn-ghost">Report a problem</a>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>
+<%- include('../partials/foot') %>

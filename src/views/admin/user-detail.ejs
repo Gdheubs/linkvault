@@ -1,0 +1,219 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <a href="/admin/users" class="badge mb-2" style="display:inline-flex">← All users</a>
+
+    <div class="page-head">
+      <div class="row gap-3">
+        <span class="avatar" style="width:52px;height:52px;font-size:1.2rem;border-radius:15px">
+          <%= (subject.name || subject.email).slice(0,1).toUpperCase() %>
+        </span>
+        <div>
+          <h1 style="font-size:1.5rem"><%= subject.name || subject.email.split('@')[0] %></h1>
+          <p class="muted small"><%= subject.email %> · joined <%= fmtDate(subject.created_at) %> · ref code <span class="mono"><%= subject.ref_code %></span></p>
+        </div>
+      </div>
+      <div class="row gap-2 wrapf">
+        <span class="badge <%= subject.status === 'active' ? 'badge-ok' : subject.status === 'banned' ? 'badge-danger' : 'badge-warn' %>"><%= subject.status %></span>
+        <span class="badge <%= subject.role === 'admin' ? 'badge-brand' : '' %>"><%= subject.role %></span>
+        <span class="badge <%= subject.fraud_score >= 60 ? 'badge-danger' : subject.fraud_score >= 35 ? 'badge-warn' : 'badge-ok' %>">
+          Score <%= subject.fraud_score %>
+        </span>
+      </div>
+    </div>
+
+    <div class="grid g4 mb-3">
+      <div class="card stat"><div class="stat-label">Withdrawable</div><div class="stat-value"><%= usd(subject.balance_micros) %></div></div>
+      <div class="card stat"><div class="stat-label">Pending</div><div class="stat-value"><%= usd(subject.pending_micros) %></div></div>
+      <div class="card stat"><div class="stat-label">Paid out</div><div class="stat-value"><%= usd(subject.paid_micros) %></div></div>
+      <div class="card stat"><div class="stat-label">Clicks, 30d</div><div class="stat-value"><%= num(summary.range.clicks) %></div>
+        <div class="stat-sub"><%= pct(summary.range.valid_visits, summary.range.clicks) %> valid</div></div>
+    </div>
+
+    <!-- ── admin actions ─────────────────────────────────────────────── -->
+    <div class="grid g4 mb-3">
+      <div class="card card-tight">
+        <div class="upper mb-2">Account status</div>
+        <form method="post" action="/admin/users/<%= subject.id %>/status" class="row gap-1">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <select class="select" name="status">
+            <% ['active','suspended','banned'].forEach(function (s) { %>
+              <option value="<%= s %>" <%= subject.status === s ? 'selected' : '' %>><%= s %></option>
+            <% }); %>
+          </select>
+          <button class="btn btn-sm">Apply</button>
+        </form>
+        <p class="xs muted mt-2">Banning also kills every active session.</p>
+      </div>
+
+      <div class="card card-tight">
+        <div class="upper mb-2">Role</div>
+        <form method="post" action="/admin/users/<%= subject.id %>/role" class="row gap-1"
+              data-confirm="Change this user's role?">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <select class="select" name="role">
+            <option value="publisher" <%= subject.role === 'publisher' ? 'selected' : '' %>>publisher</option>
+            <option value="admin" <%= subject.role === 'admin' ? 'selected' : '' %>>admin</option>
+          </select>
+          <button class="btn btn-sm">Apply</button>
+        </form>
+        <p class="xs muted mt-2">Admins can see and change everything.</p>
+      </div>
+
+      <div class="card card-tight">
+        <div class="upper mb-2">Ad credit <span class="badge"><%= usd(subject.ad_credit_micros || 0) %></span></div>
+        <form method="post" action="/admin/users/<%= subject.id %>/ad-credit" class="stack gap-1"
+              data-confirm="Adjust this account's ad credit?">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="row gap-1">
+            <input class="input" name="amount" type="number" step="0.01" placeholder="±USD" required>
+            <button class="btn btn-sm">Apply</button>
+          </div>
+          <input class="input" name="note" placeholder="Payment reference" maxlength="200">
+        </form>
+        <p class="xs muted mt-2">Spent to date: <%= usd(subject.ad_spend_micros || 0) %></p>
+      </div>
+
+      <div class="card card-tight">
+        <div class="upper mb-2">Balance adjustment</div>
+        <form method="post" action="/admin/users/<%= subject.id %>/adjust" class="stack gap-1"
+              data-confirm="Apply this balance adjustment? It is written to the ledger.">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="row gap-1">
+            <input class="input" name="amount" type="number" step="0.01" placeholder="±USD" required>
+            <button class="btn btn-sm">Apply</button>
+          </div>
+          <input class="input" name="note" placeholder="Reason (goes in the ledger)" maxlength="200">
+        </form>
+      </div>
+    </div>
+
+    <div class="grid g-side mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Traffic, 30 days</span></div>
+        <div class="chart-wrap" data-chart='<%- JSON.stringify({ type:"area", x:"label", y:"clicks", y2:"completed_visits", yLabel:"Clicks", y2Label:"Completions", series }) %>'></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Referral graph</span></div>
+        <dl class="kv">
+          <dt>Referred by</dt>
+          <dd><%- referrer ? `<a href="/admin/users/${referrer.id}" style="color:var(--brand)">${referrer.email}</a>` : '—' %></dd>
+          <dt>Referrals</dt><dd><%= num(referred.length) %></dd>
+          <dt>Referral earnings</dt><dd><%= usd(subject.ref_earn_micros) %></dd>
+          <dt>Telegram</dt><dd><%= subject.tg_chat_id ? 'Linked' : 'Not linked' %></dd>
+          <dt>Payout method</dt><dd><%= subject.payout_method || '—' %></dd>
+          <dt>Last login</dt><dd><%= subject.last_login_at ? timeAgo(subject.last_login_at) : 'never' %></dd>
+        </dl>
+        <% if (referred.length) { %>
+          <div class="divider"></div>
+          <div class="upper mb-2">Referred accounts</div>
+          <div class="stack gap-1 scroll-y" style="max-height:150px">
+            <% referred.forEach(function (r) { %>
+              <a href="/admin/users/<%= r.id %>" class="small" style="color:var(--brand)"><%= r.email %></a>
+            <% }); %>
+          </div>
+        <% } %>
+        <div class="divider"></div>
+        <form method="post" action="/admin/fraud/rescore/<%= subject.id %>">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button class="btn btn-sm btn-block">Recalculate fraud score</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="grid g2 mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Links</span><span class="badge"><%= links.length %></span></div>
+        <% if (!links.length) { %><div class="empty">No links.</div><% } else { %>
+          <div class="table-wrap scroll-y" style="border:0">
+            <table>
+              <thead><tr><th>Code</th><th class="num">Clicks</th><th class="num">Revenue</th><th>Status</th></tr></thead>
+              <tbody>
+                <% links.forEach(function (l) { %>
+                  <tr>
+                    <td><span class="code-chip">/s/<%= l.code %></span><div class="xs muted mt-1 truncate" style="max-width:160px"><%= l.title || '' %></div></td>
+                    <td class="num"><%= num(l.clicks) %></td>
+                    <td class="num"><%= usd(l.revenue_micros) %></td>
+                    <td><span class="badge <%= l.status === 'active' ? 'badge-ok' : 'badge-warn' %>"><%= l.status %></span></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Ledger</span></div>
+        <% if (!ledger.length) { %><div class="empty">No ledger entries.</div><% } else { %>
+          <div class="table-wrap scroll-y" style="border:0">
+            <table>
+              <thead><tr><th>When</th><th>Kind</th><th>Note</th><th class="num">Amount</th></tr></thead>
+              <tbody>
+                <% ledger.forEach(function (e) { %>
+                  <tr>
+                    <td class="small muted"><%= timeAgo(e.created_at) %></td>
+                    <td><span class="badge"><%= e.kind %></span></td>
+                    <td class="xs muted truncate" style="max-width:150px"><%= e.note %></td>
+                    <td class="num" style="color:<%= e.amount_micros >= 0 ? 'var(--ok)' : 'var(--danger)' %>"><%= usd(e.amount_micros, 4) %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="grid g2">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Payout requests</span></div>
+        <% if (!payouts.length) { %><div class="empty">No withdrawals.</div><% } else { %>
+          <div class="table-wrap scroll-y" style="border:0">
+            <table>
+              <thead><tr><th>When</th><th>Method</th><th>Status</th><th class="num">Amount</th></tr></thead>
+              <tbody>
+                <% payouts.forEach(function (p) { %>
+                  <tr>
+                    <td class="small muted"><%= fmtDate(p.created_at) %></td>
+                    <td class="small"><%= p.method %></td>
+                    <td><span class="badge <%= p.status === 'paid' ? 'badge-ok' : p.status === 'rejected' ? 'badge-danger' : 'badge-warn' %>"><%= p.status %></span></td>
+                    <td class="num"><%= usd(p.amount_micros) %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Fraud events</span><span class="badge"><%= fraudEvents.length %></span></div>
+        <% if (!fraudEvents.length) { %><div class="empty"><div class="empty-mark">✓</div>Clean record.</div><% } else { %>
+          <div class="stack gap-2 scroll-y">
+            <% fraudEvents.forEach(function (f) { %>
+              <div class="row between gap-2" style="padding-bottom:8px;border-bottom:1px solid var(--line-soft)">
+                <div style="min-width:0">
+                  <div class="row gap-1 wrapf">
+                    <% String(f.reason).split(',').slice(0,3).forEach(function (r) { %><span class="badge xs"><%= r %></span><% }); %>
+                  </div>
+                  <div class="xs muted mt-1"><%= timeAgo(f.created_at) %></div>
+                </div>
+                <% if (f.visit_id) { %>
+                  <form method="post" action="/admin/fraud/reverse/<%= f.visit_id %>" data-confirm="Reverse earnings for this visit?">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-xs btn-danger">Reverse</button>
+                  </form>
+                <% } %>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>

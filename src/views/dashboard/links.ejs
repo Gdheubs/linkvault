@@ -1,0 +1,204 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+
+<div class="app">
+  <%- include('../partials/side') %>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>My links</h1>
+        <p class="muted"><%= num(total) %> link<%= total === 1 ? '' : 's' %> total.</p>
+      </div>
+      <button class="btn btn-primary" data-modal-open="newLink">+ Create link</button>
+    </div>
+
+    <!-- filters -->
+    <form method="get" class="row gap-2 wrapf mb-3">
+      <input class="input" name="q" placeholder="Search code, title or destination…" value="<%= search %>" style="max-width:320px">
+      <select class="select" name="status" style="max-width:160px">
+        <option value="">Any status</option>
+        <% ['active','paused','blocked'].forEach(function (s) { %>
+          <option value="<%= s %>" <%= status === s ? 'selected' : '' %>><%= s %></option>
+        <% }); %>
+      </select>
+      <button class="btn">Filter</button>
+      <% if (search || status) { %><a href="/dashboard/links" class="btn btn-ghost">Reset</a><% } %>
+    </form>
+
+    <% if (!links.length) { %>
+      <div class="card empty">
+        <div class="empty-mark">⛓</div>
+        <p><%= search || status ? 'No links match those filters.' : 'You have not created a link yet.' %></p>
+        <button class="btn btn-primary mt-2" data-modal-open="newLink">Create your first link</button>
+      </div>
+    <% } else { %>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Link</th><th>Target</th><th>Flow</th>
+              <th class="num">Clicks</th><th class="num">Unique</th><th class="num">Done</th>
+              <th class="num">Earned</th><th>Status</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% links.forEach(function (l) { %>
+              <tr>
+                <td>
+                  <a href="/dashboard/links/<%= l.id %>" style="font-weight:600"><%= truncate(l.title || l.code, 30) %></a>
+                  <div class="copy mt-1" style="padding:4px 8px">
+                    <input readonly value="<%= baseUrl %>/s/<%= l.code %>">
+                    <button type="button" class="btn btn-xs" data-copy="self">Copy</button>
+                  </div>
+                </td>
+                <td class="small muted" style="max-width:200px">
+                  <% if (l.resource_id) { %>
+                    <span class="badge badge-info">▤ Vault</span>
+                    <div class="truncate mt-1"><%= l.file_name || 'file' %></div>
+                  <% } else { %>
+                    <div class="truncate"><%= hostOf ? hostOf(l.destination) : l.destination %></div>
+                  <% } %>
+                </td>
+                <td class="small muted"><%= l.campaign_name || 'Default' %></td>
+                <td class="num"><%= num(l.clicks) %></td>
+                <td class="num"><%= num(l.unique_clicks) %></td>
+                <td class="num"><%= num(l.completed_visits) %></td>
+                <td class="num" style="color:var(--ok);font-weight:600"><%= usd(l.revenue_micros) %></td>
+                <td>
+                  <span class="badge <%= l.status === 'active' ? 'badge-ok' : l.status === 'blocked' ? 'badge-danger' : 'badge-warn' %>">
+                    <%= l.status %>
+                  </span>
+                </td>
+                <td>
+                  <div class="row gap-1">
+                    <button class="btn btn-xs" data-modal-open="editLink" data-fill-form="#editLinkForm"
+                      data-fill='<%- JSON.stringify({ id: l.id, title: l.title, description: l.description, destination: l.destination, status: l.status }) %>'>Edit</button>
+                    <form method="post" action="/dashboard/links/<%= l.id %>/delete"
+                          data-confirm="Delete this link? The short URL stops working immediately.">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <button class="btn btn-xs btn-danger">Del</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+
+      <% if (pages > 1) { %>
+        <div class="pagination">
+          <% for (let i = 1; i <= pages; i++) { %>
+            <a href="?page=<%= i %><%= search ? '&q=' + encodeURIComponent(search) : '' %><%= status ? '&status=' + status : '' %>"
+               class="<%= i === page ? 'on' : '' %>"><%= i %></a>
+          <% } %>
+        </div>
+      <% } %>
+    <% } %>
+  </main>
+</div>
+
+<!-- ── create link modal ─────────────────────────────────────────────── -->
+<div class="modal-back" id="newLink">
+  <div class="modal" style="width:min(100%,600px)">
+    <div class="modal-head">
+      <strong>Create a monetized link</strong>
+      <button class="modal-close" data-modal-close>×</button>
+    </div>
+    <div class="modal-body">
+      <form method="post" action="/dashboard/links" class="form-grid">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="field">
+          <label class="label" for="n-dest">Destination URL</label>
+          <input class="input" id="n-dest" name="destination" placeholder="https://example.com/your-page">
+          <span class="hint">Leave blank if you are attaching a file from your vault instead.</span>
+        </div>
+
+        <div class="field">
+          <label class="label" for="n-res">…or attach a vault file</label>
+          <select class="select" id="n-res" name="resource_id">
+            <option value="">No file — use the destination URL</option>
+            <% resources.forEach(function (r) { %>
+              <option value="<%= r.id %>">#<%= r.id %> · <%= truncate(r.file_name, 40) %> (<%= fmtBytes(r.size_bytes) %>)</option>
+            <% }); %>
+          </select>
+          <% if (!resources.length) { %>
+            <span class="hint">Your vault is empty. <a href="/dashboard/files" style="color:var(--brand)">Connect Telegram</a> and send the bot a file.</span>
+          <% } %>
+        </div>
+
+        <div class="form-grid two">
+          <div class="field">
+            <label class="label" for="n-title">Title</label>
+            <input class="input" id="n-title" name="title" maxlength="160" placeholder="Shown on the unlock page">
+          </div>
+          <div class="field">
+            <label class="label" for="n-alias">Custom alias <span class="muted">(optional)</span></label>
+            <input class="input mono" id="n-alias" name="alias" maxlength="32" placeholder="my-link">
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="n-desc">Description</label>
+          <input class="input" id="n-desc" name="description" maxlength="400" placeholder="Used in link previews">
+        </div>
+
+        <div class="form-grid two">
+          <div class="field">
+            <label class="label" for="n-camp">Monetization flow</label>
+            <select class="select" id="n-camp" name="campaign_id">
+              <option value="">Platform default</option>
+              <% campaignOptions.forEach(function (c) { %>
+                <option value="<%= c.id %>"><%= c.name %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="field">
+            <label class="label" for="n-exp">Expires after (days)</label>
+            <input class="input" id="n-exp" name="expires_days" type="number" min="1" max="3650" placeholder="Never">
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="n-max">Click limit <span class="muted">(optional)</span></label>
+          <input class="input" id="n-max" name="max_clicks" type="number" min="1" placeholder="Unlimited">
+        </div>
+
+        <button class="btn btn-primary btn-lg">Create link</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── edit link modal ───────────────────────────────────────────────── -->
+<div class="modal-back" id="editLink">
+  <div class="modal">
+    <div class="modal-head"><strong>Edit link</strong><button class="modal-close" data-modal-close>×</button></div>
+    <div class="modal-body">
+      <form method="post" id="editLinkForm" class="form-grid"
+            onsubmit="this.action='/dashboard/links/'+this.elements.id.value+'/update'">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="id">
+        <div class="field"><label class="label">Title</label><input class="input" name="title" maxlength="160"></div>
+        <div class="field"><label class="label">Description</label><input class="input" name="description" maxlength="400"></div>
+        <div class="field">
+          <label class="label">Destination</label>
+          <input class="input" name="destination">
+          <span class="hint">Leave unchanged to keep the current target.</span>
+        </div>
+        <div class="field">
+          <label class="label">Status</label>
+          <select class="select" name="status">
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+          </select>
+        </div>
+        <button class="btn btn-primary">Save changes</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

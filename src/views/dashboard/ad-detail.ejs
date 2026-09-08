@@ -1,0 +1,234 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+
+<div class="app">
+  <%- include('../partials/side') %>
+
+  <main class="main">
+    <a href="/dashboard/ads" class="badge mb-2" style="display:inline-flex">← All campaigns</a>
+
+    <div class="page-head">
+      <div>
+        <div class="row gap-2 wrapf mb-1">
+          <span class="badge <%= promo.kind === 'youtube' ? 'badge-danger' : 'badge-info' %>">
+            <%= promo.kind === 'youtube' ? '▶' : promo.kind === 'product' ? '▣' : '✦' %> <%= promo.kind %>
+          </span>
+          <span class="badge <%= promo.status === 'active' ? 'badge-ok'
+            : promo.status === 'rejected' ? 'badge-danger'
+            : ['draft','expired'].includes(promo.status) ? '' : 'badge-warn' %>"><%= promo.status %></span>
+          <% if (!promo.paid && promo.status !== 'rejected') { %><span class="badge badge-warn">unfunded</span><% } %>
+        </div>
+        <h1><%= promo.title %></h1>
+        <p class="muted small">
+          <%= packageInfo ? packageInfo.name : promo.package %> · <%= usd(promo.price_micros) %> ·
+          <%= promo.days %> days · <%= promo.placement %>
+        </p>
+      </div>
+      <div class="rangebar">
+        <% [7, 30, 90].forEach(function (d) { %>
+          <a href="?days=<%= d %>" class="<%= days === d ? 'on' : '' %>"><%= d %>d</a>
+        <% }); %>
+      </div>
+    </div>
+
+    <% if (promo.status === 'rejected') { %>
+      <div class="alert alert-danger mb-3">
+        <span class="alert-mark">⚠</span>
+        <div>
+          <strong>This campaign was not approved.</strong>
+          <p class="small mt-1">
+            Your fee was returned to your ad credit. If you think this was a mistake,
+            <a href="/contact?kind=advertiser" style="color:var(--brand)">get in touch</a> — we'll tell you which
+            rule it fell foul of.
+          </p>
+        </div>
+      </div>
+    <% } else if (promo.status === 'draft') { %>
+      <div class="alert alert-warn mb-3">
+        <span class="alert-mark">⚠</span>
+        <div class="grow">
+          <strong>Draft — not funded, not running.</strong>
+          <p class="small mt-1">Fund it from your ad credit to put it in the review queue.</p>
+        </div>
+        <form method="post" action="/dashboard/ads/<%= promo.id %>/state">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="state" value="fund">
+          <button class="btn btn-sm btn-ok">Fund <%= usd(promo.price_micros) %></button>
+        </form>
+      </div>
+    <% } else if (promo.status === 'pending') { %>
+      <div class="alert alert-info mb-3">
+        <span class="alert-mark">ℹ</span>
+        <div>
+          <strong>In review.</strong>
+          <p class="small mt-1">We check every campaign by hand, usually within one business day. It goes live as
+            soon as it's approved.</p>
+        </div>
+      </div>
+    <% } %>
+
+    <!-- ── headline numbers ───────────────────────────────────────────── -->
+    <div class="grid g4 mb-3">
+      <div class="card stat">
+        <div class="stat-label">Impressions</div>
+        <div class="stat-value"><%= num(totals.impressions) %></div>
+        <div class="stat-sub"><%= num(promo.impressions) %> lifetime</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Clicks</div>
+        <div class="stat-value"><%= num(totals.clicks) %></div>
+        <div class="stat-sub"><%= num(promo.clicks) %> lifetime</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Click-through rate</div>
+        <div class="stat-value"><%= (totals.ctr * 100).toFixed(2) %>%</div>
+        <div class="stat-sub">last <%= days %> days</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Cost per click</div>
+        <div class="stat-value">
+          <%= promo.clicks ? usd(Math.round(promo.price_micros / promo.clicks), 4) : '—' %>
+        </div>
+        <div class="stat-sub">
+          <%= promo.impressions ? usd(Math.round(promo.price_micros / promo.impressions * 1000)) + ' effective CPM' : 'no delivery yet' %>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── delivery chart ─────────────────────────────────────────────── -->
+    <div class="grid g-side mb-3">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Daily delivery</span>
+          <div class="row gap-3 xs muted">
+            <span class="row gap-1"><i class="legend-key" style="background:var(--brand)"></i> Impressions</span>
+            <span class="row gap-1"><i class="legend-key" style="background:var(--brand-3)"></i> Clicks</span>
+          </div>
+        </div>
+        <div class="chart-wrap" data-chart='<%- JSON.stringify({ type:"area", x:"label", y:"impressions", y2:"clicks", yLabel:"Impressions", y2Label:"Clicks", series }) %>'></div>
+      </div>
+
+      <div class="stack gap-3">
+        <div class="card card-tight">
+          <div class="card-head"><span class="card-title">How it looks</span></div>
+          <%- preview %>
+          <p class="xs muted mt-2">
+            Every placement carries the "Promoted" label and a <code class="mono">sponsored nofollow</code> link, as
+            disclosure rules require.
+          </p>
+        </div>
+
+        <div class="card card-tight">
+          <div class="card-head"><span class="card-title">Campaign</span></div>
+          <dl class="kv">
+            <dt>Status</dt><dd><%= promo.status %></dd>
+            <dt>Funded</dt><dd><%= promo.paid ? 'yes' : 'no' %></dd>
+            <dt>Fee</dt><dd><%= usd(promo.price_micros) %></dd>
+            <dt>Term</dt><dd><%= promo.days %> days</dd>
+            <dt>Placement</dt><dd><%= promo.placement %></dd>
+            <dt>Starts</dt><dd><%= promo.starts_at ? fmtDate(promo.starts_at) : '—' %></dd>
+            <dt>Ends</dt><dd><%= promo.ends_at ? fmtDate(promo.ends_at) : '—' %></dd>
+            <dt>Created</dt><dd><%= fmtDate(promo.created_at) %></dd>
+          </dl>
+
+          <div class="divider"></div>
+          <div class="stack gap-2">
+            <% if (promo.status === 'active') { %>
+              <form method="post" action="/dashboard/ads/<%= promo.id %>/state">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="state" value="pause">
+                <button class="btn btn-sm btn-block">Pause campaign</button>
+              </form>
+            <% } else if (promo.status === 'paused') { %>
+              <form method="post" action="/dashboard/ads/<%= promo.id %>/state">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="state" value="resume">
+                <button class="btn btn-sm btn-ok btn-block">Resume campaign</button>
+              </form>
+            <% } %>
+            <form method="post" action="/dashboard/ads/<%= promo.id %>/delete"
+                  data-confirm="<%= promo.paid && ['draft','pending','approved'].includes(promo.status)
+                    ? 'Cancel this campaign? Your fee returns to your ad credit.'
+                    : 'Delete this campaign? Delivered impressions are not refunded.' %>">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-sm btn-danger btn-block">
+                <%= promo.paid && ['draft','pending','approved'].includes(promo.status) ? 'Cancel & refund' : 'Delete' %>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── breakdowns ─────────────────────────────────────────────────── -->
+    <div class="grid g3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">By country</span></div>
+        <% if (!countries.length) { %>
+          <div class="empty"><div class="empty-mark">🌐</div>No delivery yet.</div>
+        <% } else { %>
+          <div class="barlist">
+            <% const topC = Math.max.apply(null, countries.map(function(c){return c.impressions})) || 1; %>
+            <% countries.forEach(function (c) { %>
+              <div class="barlist-row">
+                <div class="barlist-name"><span><%= countryFlag(c.key) %> <%= countryName(c.key) %></span></div>
+                <div class="barlist-val"><%= num(c.impressions) %> · <%= num(c.clicks) %>c</div>
+                <div class="barlist-track"><i data-meter="<%= Math.round((c.impressions / topC) * 100) %>" style="width:0"></i></div>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">By device</span></div>
+        <% if (!devices.length) { %>
+          <div class="empty"><div class="empty-mark">▭</div>No delivery yet.</div>
+        <% } else { %>
+          <div class="row gap-3" style="align-items:center">
+            <div data-donut='<%- JSON.stringify({ slices: devices.map(function(d){ return { label: d.key, value: d.impressions }; }) }) %>'></div>
+            <div class="legend grow">
+              <% const td = devices.reduce(function(s,d){return s+d.impressions},0) || 1; %>
+              <% const pal = ['var(--brand)','var(--brand-2)','var(--brand-3)','var(--info)']; %>
+              <% devices.forEach(function (d, i) { %>
+                <div class="legend-row">
+                  <i class="legend-key" style="background:<%= pal[i % pal.length] %>"></i>
+                  <span class="legend-name"><%= d.key %></span>
+                  <span class="legend-val"><%= pct(d.impressions, td, 0) %></span>
+                </div>
+              <% }); %>
+            </div>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">By surface</span></div>
+        <% if (!surfaces.length) { %>
+          <div class="empty"><div class="empty-mark">▣</div>No delivery yet.</div>
+        <% } else { %>
+          <div class="barlist">
+            <% const topS = Math.max.apply(null, surfaces.map(function(s){return s.impressions})) || 1; %>
+            <% surfaces.forEach(function (s) { %>
+              <div class="barlist-row">
+                <div class="barlist-name">
+                  <span><%= s.key === 'gateway' ? 'Link flow' : s.key === 'blog' ? 'Blog & articles' : 'Site pages' %></span>
+                </div>
+                <div class="barlist-val"><%= num(s.impressions) %> · <%= pct(s.clicks, s.impressions, 1) %></div>
+                <div class="barlist-track"><i data-meter="<%= Math.round((s.impressions / topS) * 100) %>" style="width:0"></i></div>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="card mt-3" style="background:var(--surface-2)">
+      <div class="upper mb-2">Same data over the API</div>
+      <div class="prose"><pre><code>curl -H "Authorization: Bearer YOUR_KEY" \
+  "<%= baseUrl %>/api/v1/ads/campaigns/<%= promo.id %>/stats?days=<%= days %>"</code></pre></div>
+    </div>
+  </main>
+</div>
+
+<%- include('../partials/foot') %>

@@ -1,0 +1,222 @@
+<%- include('../partials/head', { noindex: true, description: step.subtitle || 'Preparing your link.' }) %>
+
+<div class="gw">
+
+  <!-- ══ sticky header: reading progress + stepper + countdown ══════════ -->
+  <header class="gw-bar" id="gwBar">
+    <div class="gw-scrollline"><i id="scrollLine"></i></div>
+
+    <div class="wrap gw-bar-inner">
+      <a href="/" class="logo gw-logo">
+        <span class="logo-mark">LV</span>
+        <span class="hide-sm"><%= brand.name %></span>
+      </a>
+
+      <div class="stepper">
+        <% for (let i = 1; i <= stepTotal; i++) { %>
+          <div class="stepper-node <%= i < stepIndex ? 'done' : i === stepIndex ? 'now' : '' %>">
+            <div class="stepper-dot"><%= i < stepIndex ? '✓' : i %></div>
+            <% if (i < stepTotal) { %><div class="stepper-line"><i></i></div><% } %>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="gw-clock" id="gwClock">
+        <svg class="gw-clock-ring" viewBox="0 0 36 36" aria-hidden="true">
+          <circle class="gw-clock-track" cx="18" cy="18" r="15.5"/>
+          <circle class="gw-clock-val" id="clockRing" cx="18" cy="18" r="15.5"/>
+        </svg>
+        <span class="gw-clock-num" id="clockNum"><%= stepWait %></span>
+      </div>
+    </div>
+
+    <!-- the main timer bar -->
+    <div class="gw-progress"><i id="progressBar"></i></div>
+
+    <div class="gw-status" id="gwStatus">
+      <span class="gw-status-wait">Please wait — your link is being prepared…</span>
+      <span class="gw-status-ready">Ready! Scroll down and press <b>Continue</b>.</span>
+    </div>
+  </header>
+
+  <!-- ══ body ═══════════════════════════════════════════════════════════ -->
+  <div class="gw-body">
+    <div class="wrap">
+
+      <div class="gw-intro">
+        <span class="badge badge-brand">Step <%= stepIndex %> of <%= stepTotal %></span>
+        <h1><%= step.title %></h1>
+        <p class="lead"><%= step.subtitle %></p>
+        <% if (resource) { %>
+          <div class="gw-waiting-file">
+            <span class="file-icon" style="width:38px;height:38px;font-size:1.1rem">
+              <%= resource.kind === 'video' ? '▶' : resource.kind === 'photo' ? '▣' : resource.kind === 'audio' ? '♪' : '▤' %>
+            </span>
+            <div>
+              <div class="small" style="font-weight:600"><%= resource.file_name %></div>
+              <div class="xs muted"><%= fmtBytes(resource.size_bytes) %> · waiting to be released</div>
+            </div>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- ad: above the fold -->
+      <%- adUnits[0] || '' %>
+
+      <div class="grid g-side">
+        <main>
+          <article class="card prose gw-article"><%- bodyHtml %></article>
+
+          <!-- ad: mid-article -->
+          <%- adUnits[1] || '' %>
+
+          <!-- paid promotions: blogs & YouTube videos we sold placement to -->
+          <%- promosHtml %>
+
+          <!-- ad: any remaining slots for this step -->
+          <% for (let i = 2; i < adUnits.length; i++) { %><%- adUnits[i] %><% } %>
+
+          <!-- ══ the gate: bottom of the page ══════════════════════════ -->
+          <section class="gate" id="gate">
+            <div class="gate-ring-wrap" id="gateRingWrap">
+              <svg class="gate-ring" viewBox="0 0 120 120">
+                <defs>
+                  <linearGradient id="gateGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#6d8bff"/><stop offset="55%" stop-color="#a06bff"/><stop offset="100%" stop-color="#23e0c4"/>
+                  </linearGradient>
+                </defs>
+                <circle class="gate-ring-track" cx="60" cy="60" r="52"/>
+                <circle class="gate-ring-val" id="gateRing" cx="60" cy="60" r="52"/>
+              </svg>
+              <div class="gate-ring-face">
+                <span class="gate-num" id="gateNum"><%= stepWait %></span>
+                <span class="gate-unit" id="gateUnit">seconds</span>
+              </div>
+            </div>
+
+            <h2 class="gate-title" id="gateTitle">Almost ready…</h2>
+            <p class="gate-sub" id="gateSub">
+              The <b>Continue</b> button unlocks automatically when the timer finishes. You don't have to click
+              anything else — and you never need to click an ad.
+            </p>
+
+            <button class="btn btn-primary btn-lg gate-btn" id="continueBtn" disabled>
+              <span id="continueLabel">
+                <%= stepIndex >= stepTotal ? 'Get my link' : (step.cta || `Continue to step ${stepIndex + 1}`) %>
+              </span>
+            </button>
+
+            <div class="gate-foot xs muted" id="gateFoot">
+              Unlocks in <b id="gateFootNum"><%= stepWait %></b>s
+            </div>
+          </section>
+        </main>
+
+        <!-- ══ sidebar ══════════════════════════════════════════════════ -->
+        <aside class="gw-side stack gap-3">
+          <div class="card card-tight gw-side-timer" id="sideTimer">
+            <div class="upper mb-1">Step <%= stepIndex %> of <%= stepTotal %></div>
+            <div class="side-timer-num" id="sideNum"><%= stepWait %>s</div>
+            <div class="meter mt-2"><i id="sideBar" style="width:0"></i></div>
+            <p class="xs muted mt-2" id="sideHint">Wait for the timer, then press Continue at the bottom.</p>
+          </div>
+
+          <% if (trending && trending.length) { %>
+            <div class="card card-tight">
+              <div class="card-head"><span class="card-title">While you wait</span></div>
+              <div class="stack gap-3">
+                <% trending.forEach(function (p) { %>
+                  <a href="/blog/<%= p.slug %>" target="_blank" rel="noopener" class="stack gap-1">
+                    <strong style="font-size:.88rem;line-height:1.35"><%= p.title %></strong>
+                    <span class="xs muted"><%= p.read_minutes %> min read</span>
+                  </a>
+                <% }); %>
+              </div>
+            </div>
+          <% } %>
+
+          <div class="card card-tight promo-pitch">
+            <div class="upper mb-1">Your blog or channel here</div>
+            <p class="xs">We promote blogs and YouTube videos to this exact audience from
+              <b><%= usd(cheapestPromo) %></b>.</p>
+            <a href="/promote" target="_blank" rel="noopener" class="btn btn-sm btn-block mt-2">See placements →</a>
+          </div>
+
+          <% if (products && products.length) { %>
+            <div class="card card-tight">
+              <div class="card-head"><span class="card-title">From our team</span></div>
+              <div class="stack gap-3">
+                <% products.forEach(function (p) { %>
+                  <a href="/products/<%= p.slug %>" target="_blank" rel="noopener" class="stack gap-1">
+                    <div class="row gap-2">
+                      <strong style="font-size:.88rem"><%= p.name %></strong>
+                      <% if (p.badge) { %><span class="badge badge-brand"><%= p.badge %></span><% } %>
+                    </div>
+                    <span class="xs muted"><%= p.tagline %></span>
+                  </a>
+                <% }); %>
+              </div>
+            </div>
+          <% } %>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- floating nudge: appears when the timer is done but the button is off-screen -->
+<button class="scroll-nudge" id="scrollNudge" hidden>
+  <span class="scroll-nudge-dot"></span>
+  Continue <span class="scroll-nudge-arrow">↓</span>
+</button>
+
+<!-- ══ promo popup (optional, frequency-capped) ═══════════════════════════ -->
+<% if (popup && popupCfg.enabled) { %>
+<div class="modal-back" id="promoModal">
+  <div class="modal">
+    <div class="modal-head">
+      <strong style="font-size:.92rem"><%= popup.headline || popup.name %></strong>
+      <button class="modal-close" data-modal-close aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <% if (popup.provider === 'youtube' && popup.youtube_id) { %>
+        <div class="video-frame" style="border-radius:12px;overflow:hidden">
+          <iframe src="https://www.youtube-nocookie.com/embed/<%= popup.youtube_id %>?rel=0&modestbranding=1"
+            title="<%= popup.headline %>" loading="lazy" allowfullscreen
+            referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        </div>
+      <% } else if (popup.image) { %>
+        <img src="<%= popup.image %>" alt="" style="border-radius:12px;width:100%">
+      <% } %>
+      <% if (popup.body) { %><p class="mt-2"><%= popup.body %></p><% } %>
+      <div class="row gap-2 mt-3">
+        <% if (popup.href) { %>
+          <a href="/out/<%= encodeURIComponent(popup.slot_key) %>" target="_blank" rel="nofollow sponsored noopener"
+             class="btn btn-primary grow">Learn more</a>
+        <% } %>
+        <button class="btn btn-ghost" data-modal-close>No thanks</button>
+      </div>
+      <div class="xs muted mt-2" style="text-align:center">Advertisement · closing this does not affect your timer</div>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<script>
+  window.LV_GATEWAY = {
+    token:        <%- JSON.stringify(token) %>,
+    visitKey:     <%- JSON.stringify(visit.visit_key) %>,
+    waitSeconds:  <%= stepWait %>,
+    stepIndex:    <%= stepIndex %>,
+    stepTotal:    <%= stepTotal %>,
+    isFinal:      <%= stepIndex >= stepTotal ? 'true' : 'false' %>,
+    popup:        <%= popup && popupCfg.enabled ? 'true' : 'false' %>,
+    popupKey:     <%- JSON.stringify(popup ? popup.slot_key : '') %>,
+    popupDelayMs: <%= popupCfg.delayMs %>,
+    popupPerSession: <%= popupCfg.perSession %>
+  };
+</script>
+<script src="/js/app.js" defer></script>
+<script src="/js/gateway.js" defer></script>
+</body>
+</html>

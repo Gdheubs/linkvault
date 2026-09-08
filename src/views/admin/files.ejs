@@ -1,0 +1,49 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <div class="page-head">
+      <div><h1>File vault</h1><p class="muted">Every file stored in Telegram across all publishers.</p></div>
+      <span class="pill"><span class="dot" style="background:<%= telegramReady ? 'var(--ok)' : 'var(--danger)' %>"></span> Bot <%= telegramReady ? 'online' : 'offline' %></span>
+    </div>
+    <div class="card">
+      <% if (!resources.length) { %>
+        <div class="empty"><div class="empty-mark">▤</div>No files stored yet.</div>
+      <% } else { %>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>File</th><th>Owner</th><th class="num">Size</th><th class="num">Links</th><th class="num">Downloads</th><th>Status</th><th>Moderate</th></tr></thead>
+            <tbody>
+              <% resources.forEach(function (r) { %>
+                <tr>
+                  <td>
+                    <div class="truncate" style="font-weight:600;max-width:220px"><%= r.file_name %></div>
+                    <span class="code-chip">#<%= r.id %> · <%= r.kind %></span>
+                  </td>
+                  <td class="small"><a href="/admin/users/<%= r.user_id %>" style="color:var(--brand)"><%= truncate(r.email, 22) %></a></td>
+                  <td class="num"><%= fmtBytes(r.size_bytes) %></td>
+                  <td class="num"><%= num(r.link_count) %></td>
+                  <td class="num"><%= num(r.downloads) %></td>
+                  <td><span class="badge <%= r.status === 'ready' ? 'badge-ok' : r.status === 'quarantined' ? 'badge-warn' : 'badge-danger' %>"><%= r.status %></span></td>
+                  <td>
+                    <form method="post" action="/admin/resources/<%= r.id %>/status" class="row gap-1">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <select class="select" name="status" style="padding:4px 24px 4px 8px;font-size:.76rem">
+                        <% ['ready','quarantined','removed'].forEach(function (s) { %>
+                          <option value="<%= s %>" <%= r.status === s ? 'selected' : '' %>><%= s %></option>
+                        <% }); %>
+                      </select>
+                      <button class="btn btn-xs">Set</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>

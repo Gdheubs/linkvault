@@ -1,0 +1,109 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+
+<div class="app">
+  <%- include('../partials/side') %>
+
+  <main class="main">
+    <div class="page-head">
+      <div><h1>Settings</h1><p class="muted">Profile, payout details, password and sessions.</p></div>
+    </div>
+
+    <div class="grid g2 mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Profile &amp; payout details</span></div>
+        <form method="post" action="/dashboard/settings" class="form-grid">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label class="label" for="s-name">Display name</label>
+            <input class="input" id="s-name" name="name" maxlength="80" value="<%= me.name %>">
+          </div>
+          <div class="field">
+            <label class="label">Email</label>
+            <input class="input" value="<%= me.email %>" disabled>
+            <span class="hint">Contact support to change the email on your account.</span>
+          </div>
+          <div class="field">
+            <label class="label" for="s-method">Payout method</label>
+            <input class="input" id="s-method" name="payout_method" maxlength="40" value="<%= me.payout_method %>"
+                   placeholder="PayPal / USDT-TRC20 / Bank transfer">
+          </div>
+          <div class="field">
+            <label class="label" for="s-addr">Payout address</label>
+            <input class="input" id="s-addr" name="payout_address" maxlength="200" value="<%= me.payout_address %>"
+                   placeholder="Email address or wallet">
+            <span class="hint">Double-check this. Payouts sent to a wrong address cannot be recovered.</span>
+          </div>
+          <button class="btn btn-primary">Save profile</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Change password</span></div>
+        <form method="post" action="/account/password" class="form-grid">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label class="label" for="s-cur">Current password</label>
+            <input class="input" id="s-cur" name="current" type="password" required autocomplete="current-password">
+          </div>
+          <div class="field">
+            <label class="label" for="s-new">New password</label>
+            <input class="input" id="s-new" name="next" type="password" required minlength="8" autocomplete="new-password">
+            <span class="hint"><%= passwordRules %></span>
+          </div>
+          <button class="btn btn-primary">Update password</button>
+        </form>
+
+        <div class="divider"></div>
+        <div class="upper mb-2">Account health</div>
+        <dl class="kv">
+          <dt>Traffic quality score</dt>
+          <dd>
+            <span class="badge <%= me.fraud_score >= 70 ? 'badge-danger' : me.fraud_score >= 35 ? 'badge-warn' : 'badge-ok' %>">
+              <%= me.fraud_score %>/100
+            </span>
+          </dd>
+          <dt>Account status</dt>
+          <dd><span class="badge <%= me.status === 'active' ? 'badge-ok' : 'badge-danger' %>"><%= me.status %></span></dd>
+          <dt>Member since</dt><dd><%= fmtDate(me.created_at) %></dd>
+        </dl>
+        <p class="xs muted mt-2">Lower is better. Above 70 pauses withdrawals pending review.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Active sessions</span>
+        <form method="post" action="/dashboard/settings/sessions/revoke" data-confirm="Sign out of every other device?">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button class="btn btn-xs btn-danger">Sign out others</button>
+        </form>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Device</th><th>Started</th><th>Expires</th><th></th></tr></thead>
+          <tbody>
+            <% sessions.forEach(function (s) { %>
+              <tr>
+                <td class="small muted truncate" style="max-width:420px"><%= s.ua || 'Unknown client' %></td>
+                <td class="small"><%= timeAgo(s.created_at) %></td>
+                <td class="small muted"><%= fmtDate(s.expires_at) %></td>
+                <td><% if (s.id === currentSession) { %><span class="badge badge-ok">This device</span><% } %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-head"><span class="card-title">Sign out</span></div>
+      <form method="post" action="/logout">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button class="btn btn-ghost">Sign out of this device</button>
+      </form>
+    </div>
+  </main>
+</div>
+
+<%- include('../partials/foot') %>

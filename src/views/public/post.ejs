@@ -1,0 +1,74 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<script type="application/ld+json">
+<%- JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.title,
+  description: post.excerpt,
+  author: { '@type': 'Organization', name: post.author },
+  publisher: { '@type': 'Organization', name: brand.name },
+  datePublished: new Date(post.published_at).toISOString(),
+  dateModified: new Date(post.updated_at).toISOString(),
+  mainEntityOfPage: `${baseUrl}/blog/${post.slug}`
+}) %>
+</script>
+
+<article class="section-sm">
+  <div class="wrap">
+    <div class="wrap-narrow" style="width:100%;padding:0">
+      <a href="/blog" class="badge mb-3" style="display:inline-flex">← All articles</a>
+      <div class="row gap-1 wrapf mb-2">
+        <% tags.forEach(function (t) { %>
+          <a href="/blog?tag=<%= encodeURIComponent(t) %>" class="badge badge-brand"><%= t %></a>
+        <% }); %>
+      </div>
+      <h1 class="balance" style="font-size:clamp(1.8rem,4.4vw,2.9rem)"><%= post.title %></h1>
+      <div class="row gap-3 wrapf mt-3 small muted">
+        <span><%= post.author %></span>
+        <span><%= fmtDate(post.published_at, { dateStyle: 'long' }) %></span>
+        <span><%= post.read_minutes %> min read</span>
+        <span><%= num(post.views) %> views</span>
+      </div>
+    </div>
+
+    <% if (post.cover) { %>
+      <img src="<%= post.cover %>" alt="" class="mt-4" style="border-radius:var(--r-lg);width:100%;max-height:420px;object-fit:cover">
+    <% } %>
+
+    <div class="grid g-side mt-4">
+      <div>
+        <%- ads.render('blog_top') %>
+        <div class="prose card"><%- bodyHtml %></div>
+        <%- ads.render('blog_bottom') %>
+        <%- promos.block('blog', { limit: 2, heading: "Promoted" }) %>
+
+        <div class="card mt-3 tc" style="background:var(--surface-2)">
+          <h3>Turn your files into income</h3>
+          <p class="small mt-1">Create a monetized link, share it, and keep the majority of what it earns.</p>
+          <a href="/register" class="btn btn-primary mt-3">Create a free account</a>
+        </div>
+      </div>
+
+      <aside class="stack gap-3">
+        <div class="card card-tight" style="position:sticky;top:calc(var(--nav-h) + 18px)">
+          <div class="card-head"><span class="card-title">Related reading</span></div>
+          <div class="stack gap-3">
+            <% related.forEach(function (r) { %>
+              <a href="/blog/<%= r.slug %>" class="stack gap-1">
+                <strong style="font-size:.88rem;line-height:1.35"><%= r.title %></strong>
+                <span class="xs muted"><%= r.read_minutes %> min read</span>
+              </a>
+            <% }); %>
+          </div>
+          <div class="divider"></div>
+          <%- ads.render('blog_side') %>
+        </div>
+      </aside>
+    </div>
+  </div>
+</article>
+
+<%- include('../partials/footer') %>
+<%- include('../partials/foot') %>

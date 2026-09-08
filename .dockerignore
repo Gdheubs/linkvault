@@ -1,0 +1,21 @@
+node_modules
+npm-debug.log
+
+# Never bake a local database into the image — it would shadow the mounted
+# volume on first boot and ship dev accounts to production.
+data
+*.db
+*.db-wal
+*.db-shm
+
+# Secrets belong in the platform's env config, not the image.
+.env
+
+.git
+.gitignore
+*.md
+!README.md
+.vscode
+.idea
+.DS_Store
+Thumbs.db

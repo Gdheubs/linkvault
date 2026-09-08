@@ -1,0 +1,92 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+
+<div class="app">
+  <%- include('../partials/side') %>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>Referrals</h1>
+        <p class="muted">Earn <%= referralPct %>% of what everyone you refer generates — for life.</p>
+      </div>
+    </div>
+
+    <div class="grid g-side mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Your referral link</span></div>
+        <div class="copy">
+          <input readonly value="<%= refUrl %>">
+          <button type="button" class="btn btn-sm btn-primary" data-copy="self">Copy link</button>
+        </div>
+        <div class="row gap-2 wrapf mt-3">
+          <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener"
+             href="https://twitter.com/intent/tweet?text=<%= encodeURIComponent('Monetize your links and files with ' + brand.name) %>&url=<%= encodeURIComponent(refUrl) %>">Share on 𝕏</a>
+          <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener"
+             href="https://t.me/share/url?url=<%= encodeURIComponent(refUrl) %>&text=<%= encodeURIComponent('Monetize your links with ' + brand.name) %>">Share on Telegram</a>
+          <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener"
+             href="https://wa.me/?text=<%= encodeURIComponent('Monetize your links with ' + brand.name + ' ' + refUrl) %>">Share on WhatsApp</a>
+        </div>
+
+        <div class="divider"></div>
+        <div class="row gap-3 wrapf">
+          <div><div class="upper">Your code</div><div class="mono" style="font-size:1.2rem;font-weight:700;margin-top:4px"><%= me.ref_code %></div></div>
+          <div><div class="upper">Referred users</div><div style="font-size:1.2rem;font-weight:700;margin-top:4px"><%= num(referred.length) %></div></div>
+          <div><div class="upper">Referral earnings</div><div style="font-size:1.2rem;font-weight:700;margin-top:4px;color:var(--ok)"><%= usd(totalRefEarnings) %></div></div>
+        </div>
+      </div>
+
+      <div class="card" style="background:var(--surface-2)">
+        <div class="upper mb-2">How it pays</div>
+        <ul class="feature-list">
+          <li>You earn <%= referralPct %>% of every completed visit your referrals generate.</li>
+          <li>It comes out of the <em>platform's</em> cut — your referral loses nothing.</li>
+          <li>There is no cap and no expiry.</li>
+          <li>Referral earnings follow the same hold window as normal earnings.</li>
+        </ul>
+        <div class="divider"></div>
+        <p class="xs muted">
+          Referring accounts you also control, or driving fake signups, is grounds for reversal and suspension. The
+          fraud engine correlates IPs and device fingerprints across referred accounts.
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">People you referred</span></div>
+      <% if (!referred.length) { %>
+        <div class="empty">
+          <div class="empty-mark">⇄</div>
+          Nobody has signed up with your code yet.
+          <p class="small mt-1">Share the link above to get started.</p>
+        </div>
+      <% } else { %>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Joined</th><th>Status</th><th class="num">You earned</th></tr></thead>
+            <tbody>
+              <% referred.forEach(function (r) { %>
+                <tr>
+                  <td>
+                    <div class="row gap-2">
+                      <span class="avatar"><%= (r.name || r.email).slice(0,1).toUpperCase() %></span>
+                      <div>
+                        <div style="font-weight:600"><%= r.name || r.email.split('@')[0] %></div>
+                        <div class="xs muted"><%= r.email.replace(/^(.{2}).*(@.*)$/, '$1•••$2') %></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="small muted"><%= fmtDate(r.created_at) %></td>
+                  <td><span class="badge <%= r.status === 'active' ? 'badge-ok' : 'badge-warn' %>"><%= r.status %></span></td>
+                  <td class="num" style="color:var(--ok);font-weight:600"><%= usd(r.earned || 0) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+
+<%- include('../partials/foot') %>

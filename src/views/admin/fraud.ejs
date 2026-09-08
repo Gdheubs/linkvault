@@ -1,0 +1,205 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>Anti-fraud</h1>
+        <p class="muted">Signals, flagged publishers, suspect visits and the blocklist.</p>
+      </div>
+      <div class="rangebar">
+        <% [1, 7, 30].forEach(function (d) { %>
+          <a href="?days=<%= d %>" class="<%= days === d ? 'on' : '' %>"><%= d %>d</a>
+        <% }); %>
+      </div>
+    </div>
+
+    <div class="grid g4 mb-3">
+      <div class="card card-tight"><div class="upper">Review threshold</div>
+        <div style="font-size:1.4rem;font-weight:800;margin-top:4px;color:var(--warn)"><%= thresholds.reviewScore %></div>
+        <div class="xs muted">Earnings discounted to 40%</div></div>
+      <div class="card card-tight"><div class="upper">Reject threshold</div>
+        <div style="font-size:1.4rem;font-weight:800;margin-top:4px;color:var(--danger)"><%= thresholds.rejectScore %></div>
+        <div class="xs muted">Earnings zeroed</div></div>
+      <div class="card card-tight"><div class="upper">IP burst / min</div>
+        <div style="font-size:1.4rem;font-weight:800;margin-top:4px"><%= thresholds.ipVisitsPerMin %></div>
+        <div class="xs muted">Then IP_BURST_MIN fires</div></div>
+      <div class="card card-tight"><div class="upper">Unique window</div>
+        <div style="font-size:1.4rem;font-weight:800;margin-top:4px"><%= thresholds.uniqueWindowHours %>h</div>
+        <div class="xs muted">Repeat clicks inside this are flagged</div></div>
+    </div>
+
+    <div class="grid g-side mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Signal frequency, <%= days %>d</span></div>
+        <% if (!topSignals.length) { %>
+          <div class="empty"><div class="empty-mark">✓</div>No signals fired in this window.</div>
+        <% } else { %>
+          <div class="barlist">
+            <% const topS = Math.max.apply(null, topSignals.map(function(s){return s.count})) || 1; %>
+            <% topSignals.forEach(function (s) { %>
+              <div class="barlist-row">
+                <div class="barlist-name">
+                  <span class="mono xs"><%= s.key %></span>
+                  <% if (signalCatalog[s.key]) { %>
+                    <span class="xs muted">— <%= signalCatalog[s.key].label %></span>
+                  <% } %>
+                </div>
+                <div class="barlist-val"><%= num(s.count) %></div>
+                <div class="barlist-track"><i data-meter="<%= Math.round((s.count / topS) * 100) %>" style="width:0;background:linear-gradient(90deg,#ffc061,#ff6b81)"></i></div>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Add to blocklist</span></div>
+        <form method="post" action="/admin/fraud/block" class="form-grid">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label class="label">Type</label>
+            <select class="select" name="kind">
+              <option value="ip">IP address</option>
+              <option value="iprange">IP prefix (e.g. 203.0.113.)</option>
+              <option value="country">Country code</option>
+              <option value="domain">Referring domain</option>
+              <option value="ua">User-agent substring</option>
+            </select>
+          </div>
+          <div class="field"><label class="label">Value</label><input class="input" name="value" required maxlength="200"></div>
+          <div class="field"><label class="label">Reason</label><input class="input" name="reason" maxlength="200"></div>
+          <button class="btn btn-primary">Block</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="grid g2 mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Flagged publishers</span><span class="badge"><%= flagged.length %></span></div>
+        <% if (!flagged.length) { %>
+          <div class="empty"><div class="empty-mark">✓</div>No publisher is above the review threshold.</div>
+        <% } else { %>
+          <div class="table-wrap scroll-y" style="border:0">
+            <table>
+              <thead><tr><th>Publisher</th><th class="num">Score</th><th class="num">At risk</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                <% flagged.forEach(function (u) { %>
+                  <tr>
+                    <td><a href="/admin/users/<%= u.id %>" style="color:var(--brand)"><%= truncate(u.email, 26) %></a></td>
+                    <td class="num"><span class="badge <%= u.fraud_score >= 60 ? 'badge-danger' : 'badge-warn' %>"><%= u.fraud_score %></span></td>
+                    <td class="num"><%= usd(u.balance_micros + u.pending_micros) %></td>
+                    <td><span class="badge <%= u.status === 'active' ? 'badge-ok' : 'badge-danger' %>"><%= u.status %></span></td>
+                    <td>
+                      <form method="post" action="/admin/fraud/rescore/<%= u.id %>">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-xs">Rescore</button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Blocklist</span><span class="badge"><%= blocklist.length %></span></div>
+        <% if (!blocklist.length) { %>
+          <div class="empty"><div class="empty-mark">▦</div>Blocklist is empty.</div>
+        <% } else { %>
+          <div class="table-wrap scroll-y" style="border:0">
+            <table>
+              <thead><tr><th>Type</th><th>Value</th><th>Reason</th><th></th></tr></thead>
+              <tbody>
+                <% blocklist.forEach(function (b) { %>
+                  <tr>
+                    <td><span class="badge"><%= b.kind %></span></td>
+                    <td class="mono xs truncate" style="max-width:140px"><%= b.value %></td>
+                    <td class="xs muted truncate" style="max-width:120px"><%= b.reason || '—' %></td>
+                    <td>
+                      <form method="post" action="/admin/fraud/unblock/<%= b.id %>">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-xs btn-danger">×</button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-head">
+        <span class="card-title">Suspect visits (score ≥ <%= thresholds.reviewScore %>)</span>
+        <span class="badge"><%= suspectVisits.length %></span>
+      </div>
+      <% if (!suspectVisits.length) { %>
+        <div class="empty"><div class="empty-mark">✓</div>No suspect visits in this window.</div>
+      <% } else { %>
+        <div class="table-wrap scroll-y">
+          <table>
+            <thead><tr><th>When</th><th>Publisher</th><th>Link</th><th>Origin</th><th>Signals</th><th class="num">Score</th><th class="num">Paid</th><th></th></tr></thead>
+            <tbody>
+              <% suspectVisits.forEach(function (v) {
+                   let reasons = []; try { reasons = JSON.parse(v.fraud_reasons); } catch (e) { reasons = []; } %>
+                <tr>
+                  <td class="small muted"><%= timeAgo(v.created_at) %></td>
+                  <td class="small truncate" style="max-width:130px"><%= v.email %></td>
+                  <td><span class="code-chip">/s/<%= v.code %></span></td>
+                  <td class="small"><%= countryFlag(v.country) %> <%= v.device %></td>
+                  <td>
+                    <div class="row gap-1 wrapf">
+                      <% reasons.slice(0, 3).forEach(function (r) { %>
+                        <span class="badge xs" title="<%= r.label || '' %>"><%= r.key %></span>
+                      <% }); %>
+                      <% if (reasons.length > 3) { %><span class="badge xs">+<%= reasons.length - 3 %></span><% } %>
+                    </div>
+                  </td>
+                  <td class="num"><span class="badge <%= v.fraud_score >= thresholds.rejectScore ? 'badge-danger' : 'badge-warn' %>"><%= v.fraud_score %></span></td>
+                  <td class="num"><%= usd(v.publisher_micros, 4) %></td>
+                  <td>
+                    <% if (v.publisher_micros > 0) { %>
+                      <form method="post" action="/admin/fraud/reverse/<%= v.id %>" data-confirm="Reverse the earnings on this visit?">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-xs btn-danger">Reverse</button>
+                      </form>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Signal catalogue</span><span class="badge"><%= Object.keys(signalCatalog).length %> signals</span></div>
+      <div class="table-wrap scroll-y">
+        <table>
+          <thead><tr><th>Key</th><th>Meaning</th><th class="num">Weight</th></tr></thead>
+          <tbody>
+            <% Object.keys(signalCatalog).forEach(function (k) { %>
+              <tr>
+                <td class="mono xs"><%= k %></td>
+                <td class="small muted"><%= signalCatalog[k].label %></td>
+                <td class="num">
+                  <span class="badge <%= signalCatalog[k].w >= 60 ? 'badge-danger' : signalCatalog[k].w >= 35 ? 'badge-warn' : '' %>">
+                    +<%= signalCatalog[k].w %>
+                  </span>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>

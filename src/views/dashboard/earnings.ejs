@@ -1,0 +1,180 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+
+<div class="app">
+  <%- include('../partials/side') %>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>Earnings</h1>
+        <p class="muted">Your ledger, balances and withdrawal history.</p>
+      </div>
+      <div class="rangebar">
+        <% [7, 30, 90].forEach(function (d) { %>
+          <a href="?days=<%= d %>" class="<%= days === d ? 'on' : '' %>"><%= d %>d</a>
+        <% }); %>
+      </div>
+    </div>
+
+    <div class="grid g4 mb-3">
+      <div class="card stat">
+        <div class="stat-label">Withdrawable now</div>
+        <div class="stat-value" style="color:var(--ok)"><%= usd(me.balance_micros) %></div>
+        <div class="stat-sub">Minimum <%= usd(minPayout) %></div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Pending release</div>
+        <div class="stat-value"><%= usd(me.pending_micros) %></div>
+        <div class="stat-sub">Held <%= holdHours %>h for fraud review</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Paid out</div>
+        <div class="stat-value"><%= usd(me.paid_micros) %></div>
+        <div class="stat-sub">Lifetime</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Realised eCPM</div>
+        <div class="stat-value"><%= usd(ecpm, 3) %></div>
+        <div class="stat-sub">Per 1,000 valid visits, last <%= days %>d</div>
+      </div>
+    </div>
+
+    <div class="grid g-side mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Daily earnings</span></div>
+        <div class="chart-wrap" data-chart='<%- JSON.stringify({ type:"bar", x:"label", y:"publisher_micros", yLabel:"Earnings", format:"money", series }) %>'></div>
+      </div>
+
+      <!-- ── withdraw ─────────────────────────────────────────────────── -->
+      <div class="card">
+        <div class="card-head"><span class="card-title">Request a withdrawal</span></div>
+
+        <% const canWithdraw = me.balance_micros >= minPayout && me.fraud_score < 70; %>
+        <% if (me.fraud_score >= 70) { %>
+          <div class="alert alert-danger mb-3">
+            <span class="alert-mark">⚠</span>
+            <div><strong>Withdrawals paused.</strong><p class="small mt-1">Your traffic-quality score is <%= me.fraud_score %>/100 and is under review. Contact support.</p></div>
+          </div>
+        <% } %>
+
+        <form method="post" action="/dashboard/withdraw" class="form-grid"
+              data-confirm="Submit this withdrawal request? The amount is debited from your balance immediately and refunded if rejected.">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field">
+            <label class="label" for="w-amt">Amount (USD)</label>
+            <input class="input" id="w-amt" name="amount" type="number" step="0.01" min="<%= (minPayout/1000000).toFixed(2) %>"
+                   max="<%= (me.balance_micros/1000000).toFixed(2) %>"
+                   value="<%= canWithdraw ? (me.balance_micros/1000000).toFixed(2) : '' %>" <%= canWithdraw ? '' : 'disabled' %>>
+            <span class="hint">Available: <%= usd(me.balance_micros) %></span>
+          </div>
+          <div class="field">
+            <label class="label" for="w-method">Payout method</label>
+            <input class="input" id="w-method" name="method" value="<%= me.payout_method %>" placeholder="PayPal / USDT-TRC20 / Bank"
+                   <%= canWithdraw ? '' : 'disabled' %>>
+          </div>
+          <div class="field">
+            <label class="label" for="w-addr">Payout address</label>
+            <input class="input" id="w-addr" name="address" value="<%= me.payout_address %>" placeholder="Email or wallet address"
+                   <%= canWithdraw ? '' : 'disabled' %>>
+          </div>
+          <button class="btn btn-primary btn-block" <%= canWithdraw ? '' : 'disabled' %>>
+            <%= canWithdraw ? 'Request withdrawal' : `Reach ${usd(minPayout)} to withdraw` %>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="grid g2 mb-3">
+      <!-- ledger -->
+      <div class="card">
+        <div class="card-head"><span class="card-title">Ledger</span><span class="badge">Immutable</span></div>
+        <% if (!ledger.length) { %>
+          <div class="empty"><div class="empty-mark">$</div>No ledger entries yet.</div>
+        <% } else { %>
+          <div class="table-wrap scroll-y" style="border:0">
+            <table>
+              <thead><tr><th>When</th><th>Type</th><th>Note</th><th class="num">Amount</th></tr></thead>
+              <tbody>
+                <% ledger.forEach(function (e) { %>
+                  <tr>
+                    <td class="small muted"><%= timeAgo(e.created_at) %></td>
+                    <td>
+                      <span class="badge <%= e.kind === 'earning' ? 'badge-ok' : e.kind === 'referral' ? 'badge-info' : e.kind === 'payout' ? 'badge-warn' : e.kind === 'reversal' ? 'badge-danger' : '' %>">
+                        <%= e.kind %>
+                      </span>
+                    </td>
+                    <td class="small muted truncate" style="max-width:180px"><%= e.note || '—' %></td>
+                    <td class="num" style="color:<%= e.amount_micros >= 0 ? 'var(--ok)' : 'var(--danger)' %>;font-weight:600">
+                      <%= e.amount_micros >= 0 ? '+' : '−' %><%= usd(Math.abs(e.amount_micros), 4).replace('$','$') %>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- payouts -->
+      <div class="card">
+        <div class="card-head"><span class="card-title">Withdrawal history</span></div>
+        <% if (!payouts.length) { %>
+          <div class="empty"><div class="empty-mark">⇢</div>No withdrawals requested yet.</div>
+        <% } else { %>
+          <div class="table-wrap scroll-y" style="border:0">
+            <table>
+              <thead><tr><th>Requested</th><th>Method</th><th>Status</th><th class="num">Amount</th></tr></thead>
+              <tbody>
+                <% payouts.forEach(function (p) { %>
+                  <tr>
+                    <td class="small muted"><%= fmtDate(p.created_at) %></td>
+                    <td class="small"><%= p.method %></td>
+                    <td>
+                      <span class="badge <%= p.status === 'paid' ? 'badge-ok' : p.status === 'rejected' ? 'badge-danger' : p.status === 'approved' ? 'badge-info' : 'badge-warn' %>">
+                        <%= p.status %>
+                      </span>
+                      <% if (p.note) { %><div class="xs muted mt-1"><%= truncate(p.note, 40) %></div><% } %>
+                    </td>
+                    <td class="num" style="font-weight:600"><%= usd(p.amount_micros) %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- rate card -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <span class="card-title">What your traffic is worth</span>
+          <p class="xs muted mt-1">Gross CPM per 1,000 valid visits. Your share is <%= shares.publisher %>%.</p>
+        </div>
+        <a href="/pricing" class="btn btn-xs btn-ghost">Full details</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Country</th><th>Device</th><th class="num">Gross CPM</th><th class="num">Fill</th><th class="num">Your share / 1k</th></tr></thead>
+          <tbody>
+            <% rateCard.forEach(function (r) { %>
+              <tr>
+                <td><%= r.country === '*' ? '🌐 All others' : countryFlag(r.country) + ' ' + countryName(r.country) %></td>
+                <td><%= r.device === '*' ? 'Any' : r.device %></td>
+                <td class="num"><%= usd(r.cpm_micros, 3) %></td>
+                <td class="num"><%= Math.round(r.fill_rate * 100) %>%</td>
+                <td class="num" style="color:var(--ok);font-weight:600">
+                  <%= usd(Math.round(r.cpm_micros * r.fill_rate * (shares.publisher / 100)), 3) %>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<%- include('../partials/foot') %>

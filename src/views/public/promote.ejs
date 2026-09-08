@@ -1,0 +1,379 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<section class="section-sm">
+  <div class="wrap">
+
+    <!-- ── hero ──────────────────────────────────────────────────────── -->
+    <div class="tc mb-4">
+      <div class="upper mb-1">Advertise with us</div>
+      <h1 style="font-size:clamp(1.9rem,4.4vw,3rem)" class="balance">
+        Put your <span class="gradient-text">blog or YouTube video</span> in front of our readers
+      </h1>
+      <p class="lead" style="margin:16px auto 0">
+        We sell a small number of clearly-labelled promoted placements across our link flow and article pages.
+        Flat fee, fixed term, no bidding, no minimum spend.
+      </p>
+      <div class="row center gap-2 mt-3 wrapf">
+        <% if (user) { %>
+          <a href="/dashboard/ads" class="btn btn-primary btn-lg">Open your campaign dashboard</a>
+          <a href="#packages" class="btn btn-ghost btn-lg">See packages</a>
+        <% } else { %>
+          <a href="#packages" class="btn btn-primary btn-lg">See packages</a>
+          <a href="#submit" class="btn btn-ghost btn-lg">Submit a promotion</a>
+        <% } %>
+      </div>
+      <p class="small muted" style="margin-top:14px">
+        <% if (user) { %>
+          Manage campaigns, fund them and read live analytics from
+          <a href="/dashboard/ads" style="color:var(--brand)">your dashboard</a> — or drive it all from the
+          <a href="/dashboard/api" style="color:var(--brand)">API</a>.
+        <% } else { %>
+          <a href="/register" style="color:var(--brand)">Create a free account</a> to run campaigns self-serve,
+          with a live analytics dashboard and a full API — or just use the form below.
+        <% } %>
+      </p>
+    </div>
+
+    <!-- ── what you get ──────────────────────────────────────────────── -->
+    <div class="grid g4 mb-4">
+      <div class="card stat reveal">
+        <div class="stat-label">Placements live</div>
+        <div class="stat-value"><%= num(liveCount) %></div>
+        <div class="stat-sub">rotating right now</div>
+      </div>
+      <div class="card stat reveal">
+        <div class="stat-label">Link visits served</div>
+        <div class="stat-value"><%= num(reach.clicks) %></div>
+        <div class="stat-sub">all-time through our flow</div>
+      </div>
+      <div class="card stat reveal">
+        <div class="stat-label">Articles on site</div>
+        <div class="stat-value"><%= num(reach.posts) %></div>
+        <div class="stat-sub">each carrying placements</div>
+      </div>
+      <div class="card stat reveal">
+        <div class="stat-label">Starting at</div>
+        <div class="stat-value"><%= usd(Math.min.apply(null, packages.map(function(p){return p.price})) * 1000000) %></div>
+        <div class="stat-sub">flat, per term</div>
+      </div>
+    </div>
+
+    <div class="alert alert-info mb-4">
+      <span class="alert-mark">ℹ</span>
+      <div>
+        <strong>About those numbers.</strong>
+        <p class="small mt-1">
+          They are this deployment's own counters, shown raw and unadjusted. We do not publish projected impressions
+          or guaranteed reach, because we cannot honestly promise either. Buy a short term first, look at your click
+          report, and renew only if the numbers work for you.
+        </p>
+      </div>
+    </div>
+
+    <!-- ── packages ──────────────────────────────────────────────────── -->
+    <div id="packages" class="mb-4" style="scroll-margin-top:90px">
+      <div class="tc mb-3">
+        <h2>Packages</h2>
+        <p class="lead" style="margin:10px auto 0">One flat fee. No auction, no CPM maths, no surprise invoice.</p>
+      </div>
+
+      <div class="pkg-grid">
+        <% packages.forEach(function (pk) { %>
+          <div class="card pkg <%= pk.featured ? 'featured' : '' %> reveal">
+            <% if (pk.featured) { %><span class="pkg-flag">Most popular</span><% } %>
+            <div class="upper mb-1"><%= pk.name %></div>
+            <div class="pkg-price"><sup>$</sup><%= pk.price %></div>
+            <div class="small muted mb-2"><%= pk.days %> days · <%= pk.placement === 'everywhere' ? 'every surface' : pk.placement %></div>
+            <p class="small"><%= pk.blurb %></p>
+            <ul class="feature-list mt-3">
+              <% (pk.perks || []).forEach(function (perk) { %><li><%= perk %></li><% }); %>
+            </ul>
+            <a href="#submit" class="btn <%= pk.featured ? 'btn-primary' : '' %> btn-block mt-3"
+               style="margin-top:auto" data-pick-package="<%= pk.key %>">
+              Choose <%= pk.name %>
+            </a>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+
+    <!-- ── what it looks like ────────────────────────────────────────── -->
+    <div class="grid g-side mb-4">
+      <div class="card">
+        <div class="card-head"><span class="card-title">What your placement looks like</span></div>
+        <p class="small mb-3">
+          Every promotion renders as a labelled card. We do not disguise paid placements as editorial — the
+          <span class="promo-tag" style="display:inline-block;vertical-align:middle">Promoted</span> label is
+          always visible and outbound links carry <code class="mono">rel="sponsored nofollow"</code>.
+        </p>
+
+        <% if (samples && samples.length) { %>
+          <div class="promo-grid"><%- samples.map(function (s) { return promos.card(s); }).join('') %></div>
+        <% } else { %>
+          <!-- static preview when nothing is live yet -->
+          <div class="promo-grid">
+            <div class="promo promo-card">
+              <div class="promo-head"><span class="promo-tag">Promoted</span><span class="promo-by">Your name here</span></div>
+              <div class="promo-row">
+                <div class="promo-thumb promo-thumb-mark">✦</div>
+                <div class="promo-copy">
+                  <strong>Your blog post headline goes here</strong>
+                  <span>One or two lines describing what a reader gets by clicking through.</span>
+                </div>
+              </div>
+              <span class="promo-cta">Read more →</span>
+            </div>
+            <div class="promo promo-card">
+              <div class="promo-head"><span class="promo-tag">Promoted</span><span class="promo-by">Your channel</span></div>
+              <div class="promo-row">
+                <div class="promo-thumb promo-thumb-mark">▶</div>
+                <div class="promo-copy">
+                  <strong>Your YouTube video title</strong>
+                  <span>Video placements embed the player directly on the page.</span>
+                </div>
+              </div>
+              <span class="promo-cta">Watch now →</span>
+            </div>
+          </div>
+        <% } %>
+      </div>
+
+      <aside class="stack gap-3">
+        <div class="card card-tight">
+          <div class="card-head"><span class="card-title">How it works</span></div>
+          <div class="stack gap-2">
+            <div class="flow-node" style="text-align:left"><strong>1. Submit</strong><span class="xs muted">Send us the link and pick a package. Takes a minute.</span></div>
+            <div class="flow-node" style="text-align:left"><strong>2. We review</strong><span class="xs muted">Usually within one business day. We check the destination is safe and on-topic.</span></div>
+            <div class="flow-node" style="text-align:left"><strong>3. You pay</strong><span class="xs muted">We email an invoice once approved. Nothing is charged before that.</span></div>
+            <div class="flow-node" style="text-align:left"><strong>4. It goes live</strong><span class="xs muted">Placement starts immediately and runs for the full term.</span></div>
+          </div>
+        </div>
+
+        <div class="card card-tight">
+          <div class="card-head"><span class="card-title">What we decline</span></div>
+          <ul class="feature-list">
+            <li>Adult, gambling, or pharmaceutical content</li>
+            <li>Anything misleading, scammy, or "get rich quick"</li>
+            <li>Malware, phishing, or cracked software</li>
+            <li>Content that would breach our ad partners' policies</li>
+            <li>Pages loaded with intrusive interstitials of their own</li>
+          </ul>
+          <p class="xs muted mt-2">Rejected submissions are never charged.</p>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ── self-serve ────────────────────────────────────────────────── -->
+    <div class="card mb-4" style="background:linear-gradient(135deg,color-mix(in oklab,var(--brand) 12%,var(--surface)),var(--surface))">
+      <div class="grid g2 gap-4" style="align-items:center">
+        <div>
+          <div class="upper mb-1">Self-serve</div>
+          <h2 style="font-size:clamp(1.3rem,2.6vw,1.8rem)">Run campaigns yourself, with real analytics</h2>
+          <p class="small mt-2">
+            With an account you skip the back-and-forth entirely: create a campaign, fund it from prepaid credit,
+            and watch delivery by day, country, device and placement. Pause or cancel any time — a campaign that
+            never went live is refunded in full.
+          </p>
+          <div class="row gap-2 mt-3 wrapf">
+            <% if (user) { %>
+              <a href="/dashboard/ads" class="btn btn-primary">Go to campaigns</a>
+            <% } else { %>
+              <a href="/register" class="btn btn-primary">Create a free account</a>
+            <% } %>
+            <a href="/dashboard/api" class="btn btn-ghost">API reference</a>
+          </div>
+        </div>
+        <div class="prose" style="margin:0">
+          <pre style="margin:0"><code>POST /api/v1/ads/campaigns
+{
+  "kind": "youtube",
+  "package": "spotlight",
+  "title": "My new video",
+  "youtube_id": "https://youtu.be/…"
+}
+
+GET /api/v1/ads/campaigns/12/stats
+→ impressions, clicks, CTR, CPC,
+  by country / device / surface</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── submit ────────────────────────────────────────────────────── -->
+    <div id="submit" style="scroll-margin-top:90px">
+      <% if (sent) { %>
+        <div class="card tc" style="padding:48px">
+          <div class="unlock-mark" style="width:66px;height:66px;font-size:1.7rem">✓</div>
+          <h2>Submission received</h2>
+          <p class="lead" style="margin:14px auto 0">
+            We review every promotion by hand, usually within one business day. If it's a fit we'll email you an
+            invoice — nothing is charged before you approve it, and rejected submissions are never billed.
+          </p>
+          <div class="row center gap-2 mt-4 wrapf">
+            <a href="/promote" class="btn">Submit another</a>
+            <a href="/blog" class="btn btn-ghost">Read the blog</a>
+          </div>
+        </div>
+      <% } else { %>
+        <div class="grid g-side">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">Submit a promotion</span>
+              <span class="badge">no account needed</span>
+            </div>
+
+            <% if (error) { %>
+              <div class="alert alert-danger mb-3"><span class="alert-mark">⚠</span><div><%= error %></div></div>
+            <% } %>
+
+            <form method="post" action="/promote" class="form-grid" id="promoteForm">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <div style="position:absolute;left:-9999px" aria-hidden="true">
+                <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+              </div>
+
+              <div class="form-grid two">
+                <div class="field">
+                  <label class="label" for="p-kind">What are you promoting?</label>
+                  <select class="select" id="p-kind" name="kind">
+                    <option value="blog" <%= values.kind === 'blog' ? 'selected' : '' %>>A blog post or article</option>
+                    <option value="youtube" <%= values.kind === 'youtube' ? 'selected' : '' %>>A YouTube video</option>
+                    <option value="product" <%= values.kind === 'product' ? 'selected' : '' %>>A product or app</option>
+                    <option value="link" <%= values.kind === 'link' ? 'selected' : '' %>>Something else</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="label" for="p-package">Package</label>
+                  <select class="select" id="p-package" name="package" required>
+                    <option value="">Choose a package…</option>
+                    <% packages.forEach(function (pk) { %>
+                      <option value="<%= pk.key %>" <%= values.package === pk.key ? 'selected' : '' %>>
+                        <%= pk.name %> — $<%= pk.price %> for <%= pk.days %> days
+                      </option>
+                    <% }); %>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label class="label" for="p-title">Headline</label>
+                <input class="input" id="p-title" name="title" required maxlength="140"
+                       value="<%= values.title || '' %>" placeholder="The title readers will see on the card">
+              </div>
+
+              <div class="field">
+                <label class="label" for="p-blurb">One-line description</label>
+                <input class="input" id="p-blurb" name="blurb" maxlength="300"
+                       value="<%= values.blurb || '' %>" placeholder="What does a reader get by clicking through?">
+              </div>
+
+              <div class="field" id="ytField" hidden>
+                <label class="label" for="p-yt">YouTube video URL or ID</label>
+                <input class="input" id="p-yt" name="youtube_id" maxlength="200"
+                       value="<%= values.youtube_id || '' %>" placeholder="https://youtube.com/watch?v=…">
+                <span class="hint">We embed the player directly using YouTube's privacy-enhanced domain.</span>
+              </div>
+
+              <div class="field">
+                <label class="label" for="p-url">Destination URL</label>
+                <input class="input" id="p-url" name="url" maxlength="500"
+                       value="<%= values.url || '' %>" placeholder="https://yourblog.com/your-post">
+                <span class="hint">Where the card links to. Must be a public http(s) page.</span>
+              </div>
+
+              <div class="form-grid two">
+                <div class="field">
+                  <label class="label" for="p-image">Thumbnail URL <span class="muted">(optional)</span></label>
+                  <input class="input" id="p-image" name="image" maxlength="500" value="<%= values.image || '' %>">
+                </div>
+                <div class="field">
+                  <label class="label" for="p-cta">Button text <span class="muted">(optional)</span></label>
+                  <input class="input" id="p-cta" name="cta" maxlength="40" value="<%= values.cta || '' %>"
+                         placeholder="Read more">
+                </div>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="form-grid two">
+                <div class="field">
+                  <label class="label" for="p-adv">Your name or brand</label>
+                  <input class="input" id="p-adv" name="advertiser" maxlength="80" value="<%= values.advertiser || '' %>">
+                </div>
+                <div class="field">
+                  <label class="label" for="p-email">Contact email</label>
+                  <input class="input" id="p-email" name="email" type="email" required maxlength="190"
+                         value="<%= values.email || '' %>">
+                  <span class="hint">Where we send the invoice and your click report.</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label class="label" for="p-note">Anything else? <span class="muted">(optional)</span></label>
+                <textarea class="textarea" id="p-note" name="note" maxlength="500"
+                          style="min-height:90px"><%= values.note || '' %></textarea>
+              </div>
+
+              <button class="btn btn-primary btn-lg">Submit for review</button>
+              <p class="xs muted tc">
+                Submitting costs nothing. We only invoice after we've approved your placement.
+              </p>
+            </form>
+          </div>
+
+          <aside class="stack gap-3">
+            <div class="card card-tight">
+              <div class="card-head"><span class="card-title">Reporting</span></div>
+              <p class="small">
+                Every placement gets impression and click counts. Ask us any time and we'll send the current
+                numbers — or check in at the end of your term before deciding whether to renew.
+              </p>
+              <div class="divider"></div>
+              <div class="upper mb-1">Questions?</div>
+              <p class="xs">Email <a href="mailto:<%= brand.supportEmail %>" style="color:var(--brand)"><%= brand.supportEmail %></a>
+                or use the <a href="/contact?kind=advertiser" style="color:var(--brand)">contact form</a>.</p>
+            </div>
+
+            <div class="card card-tight" style="background:var(--surface-2)">
+              <div class="upper mb-2">Honest expectations</div>
+              <p class="xs">
+                This is a small, targeted placement — not a media buy. If you need guaranteed impression volume or
+                precise audience targeting, a real ad network will serve you better. What we offer is a cheap,
+                clearly-labelled slot in front of an engaged audience, with numbers you can verify.
+              </p>
+            </div>
+          </aside>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var kind = document.getElementById('p-kind');
+    var yt = document.getElementById('ytField');
+    var url = document.getElementById('p-url');
+    if (!kind || !yt) return;
+
+    function sync() {
+      var isYt = kind.value === 'youtube';
+      yt.hidden = !isYt;
+      if (url) url.required = !isYt;
+    }
+    kind.addEventListener('change', sync);
+    sync();
+
+    // package buttons scroll down and preselect
+    document.querySelectorAll('[data-pick-package]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var sel = document.getElementById('p-package');
+        if (sel) sel.value = b.getAttribute('data-pick-package');
+      });
+    });
+  })();
+</script>
+
+<%- include('../partials/footer') %>
+<%- include('../partials/foot') %>

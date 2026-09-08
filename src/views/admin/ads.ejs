@@ -1,0 +1,166 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <div class="page-head">
+      <div><h1>Ad inventory</h1><p class="muted">Banners, native units, YouTube promos and popups — per placement.</p></div>
+      <button class="btn btn-primary" data-modal-open="slotModal">+ New slot</button>
+    </div>
+
+    <div class="alert <%= adsenseReady ? 'alert-ok' : 'alert-warn' %> mb-3">
+      <span class="alert-mark"><%= adsenseReady ? '✓' : '⚠' %></span>
+      <div>
+        <strong>AdSense <%= adsenseReady ? 'is live' : 'is not serving yet' %><%= adsenseClient ? ` (${adsenseClient})` : '' %>.</strong>
+        <p class="small mt-1">
+          <% if (adsenseReady) { %>
+            Slots with provider <code class="mono">adsense</code> render a real <code class="mono">&lt;ins class="adsbygoogle"&gt;</code>.
+            Put the unit's <strong>data-ad-slot id</strong> in the slot's HTML field.
+          <% } else { %>
+            Slots with provider <code class="mono">adsense</code> render a sized placeholder so your layout is identical
+            before and after approval. Set <code class="mono">ADSENSE_CLIENT</code> and
+            <code class="mono">ADSENSE_ENABLED=true</code> in <code class="mono">.env</code> once approved.
+          <% } %>
+        </p>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-head"><span class="card-title">Popup behaviour</span></div>
+      <form method="post" action="/admin/ads/popup" class="row gap-3 wrapf" style="align-items:flex-end">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label class="check" style="margin-bottom:10px">
+          <input type="checkbox" name="popup_enabled" value="1" <%= popupCfg.enabled ? 'checked' : '' %>>
+          <span>Enable promo popups on the gateway</span>
+        </label>
+        <div class="field" style="width:150px">
+          <label class="label">Delay (ms)</label>
+          <input class="input" name="popup_delay_ms" type="number" min="0" max="120000" value="<%= popupCfg.delayMs %>">
+        </div>
+        <div class="field" style="width:150px">
+          <label class="label">Max per session</label>
+          <input class="input" name="popup_per_session" type="number" min="0" max="5" value="<%= popupCfg.perSession %>">
+        </div>
+        <button class="btn btn-primary">Save</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Slots</span><span class="badge"><%= slots.length %></span></div>
+      <% if (!slots.length) { %>
+        <div class="empty"><div class="empty-mark">▣</div>No ad slots defined.</div>
+      <% } else { %>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Slot</th><th>Type</th><th>Provider</th><th>Placement</th>
+                  <th class="num">Weight</th><th class="num">Impr.</th><th class="num">Clicks</th><th class="num">CTR</th><th>On</th><th></th></tr>
+            </thead>
+            <tbody>
+              <% slots.forEach(function (s) { %>
+                <tr>
+                  <td>
+                    <div style="font-weight:600"><%= s.name %></div>
+                    <span class="code-chip"><%= s.slot_key %></span>
+                  </td>
+                  <td><span class="badge"><%= s.type %></span></td>
+                  <td><span class="badge <%= s.provider === 'adsense' ? 'badge-brand' : s.provider === 'youtube' ? 'badge-danger' : '' %>"><%= s.provider %></span></td>
+                  <td class="small muted"><%= s.placement %></td>
+                  <td class="num"><%= s.weight %></td>
+                  <td class="num"><%= num(s.impressions) %></td>
+                  <td class="num"><%= num(s.clicks) %></td>
+                  <td class="num"><%= pct(s.clicks, s.impressions, 2) %></td>
+                  <td><span class="badge <%= s.enabled ? 'badge-ok' : '' %>"><%= s.enabled ? 'on' : 'off' %></span></td>
+                  <td>
+                    <div class="row gap-1">
+                      <button class="btn btn-xs" data-modal-open="slotModal" data-fill-form="#slotForm"
+                        data-fill='<%- JSON.stringify({ slot_key: s.slot_key, name: s.name, type: s.type, provider: s.provider, html: s.html, youtube_id: s.youtube_id, href: s.href, image: s.image, headline: s.headline, body: s.body, placement: s.placement, enabled: !!s.enabled, weight: s.weight }) %>'>Edit</button>
+                      <form method="post" action="/admin/ads/<%= encodeURIComponent(s.slot_key) %>/delete" data-confirm="Delete this ad slot?">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-xs btn-danger">×</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card mt-3" style="background:var(--surface-2)">
+      <div class="upper mb-2">Slot keys the templates look for</div>
+      <div class="grid g3">
+        <div><strong class="small">Gateway</strong><p class="xs mt-1"><code class="mono">gw_top, gw_mid, gw_bottom, gw_native_1, gw_native_2, gw_video, gw_unlock</code> — reference these from a campaign step's <code class="mono">slots[]</code>.</p></div>
+        <div><strong class="small">Site</strong><p class="xs mt-1"><code class="mono">site_mid, site_side</code> — homepage, products, contact.</p></div>
+        <div><strong class="small">Blog</strong><p class="xs mt-1"><code class="mono">blog_top, blog_bottom, blog_side</code> — article pages.</p></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-back" id="slotModal">
+  <div class="modal" style="width:min(100%,660px)">
+    <div class="modal-head"><strong>Ad slot</strong><button class="modal-close" data-modal-close>×</button></div>
+    <div class="modal-body">
+      <form method="post" action="/admin/ads" id="slotForm" class="form-grid">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="form-grid two">
+          <div class="field"><label class="label">Slot key</label><input class="input mono" name="slot_key" required placeholder="gw_top" maxlength="40"></div>
+          <div class="field"><label class="label">Display name</label><input class="input" name="name" required maxlength="80"></div>
+        </div>
+        <div class="form-grid two">
+          <div class="field">
+            <label class="label">Type</label>
+            <select class="select" name="type">
+              <% ['banner','native','inarticle','video','popup','interstitial'].forEach(function (t) { %>
+                <option value="<%= t %>"><%= t %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="field">
+            <label class="label">Provider</label>
+            <select class="select" name="provider">
+              <option value="adsense">adsense — Google ad unit</option>
+              <option value="youtube">youtube — video embed</option>
+              <option value="house">house — your own promo</option>
+              <option value="custom">custom — paste network HTML</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid two">
+          <div class="field">
+            <label class="label">Placement</label>
+            <select class="select" name="placement">
+              <option value="gateway">gateway</option><option value="site">site</option>
+              <option value="blog">blog</option><option value="both">both</option>
+            </select>
+          </div>
+          <div class="field"><label class="label">Weight</label><input class="input" name="weight" type="number" min="0" max="1000" value="10"></div>
+        </div>
+
+        <div class="field">
+          <label class="label">HTML / AdSense slot id</label>
+          <textarea class="textarea code" name="html" style="min-height:110px"
+            placeholder="For adsense: just the data-ad-slot number, e.g. 1234567890&#10;For custom: paste the full network tag"></textarea>
+          <span class="hint">Custom HTML is injected verbatim and is only writable by an admin. Do not paste anything you have not read.</span>
+        </div>
+
+        <div class="form-grid two">
+          <div class="field"><label class="label">YouTube video id</label><input class="input mono" name="youtube_id" maxlength="40" placeholder="dQw4w9WgXcQ"></div>
+          <div class="field"><label class="label">Click-through URL (house)</label><input class="input" name="href" maxlength="500" placeholder="https://…"></div>
+        </div>
+        <div class="form-grid two">
+          <div class="field"><label class="label">Headline</label><input class="input" name="headline" maxlength="160"></div>
+          <div class="field"><label class="label">Image URL</label><input class="input" name="image" maxlength="500"></div>
+        </div>
+        <div class="field"><label class="label">Body copy</label><input class="input" name="body" maxlength="400"></div>
+
+        <label class="check"><input type="checkbox" name="enabled" value="1" checked><span>Enabled</span></label>
+        <button class="btn btn-primary btn-lg">Save slot</button>
+      </form>
+    </div>
+  </div>
+</div>
+<%- include('../partials/foot') %>

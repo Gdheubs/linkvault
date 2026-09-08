@@ -1,0 +1,140 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+
+<div class="app">
+  <%- include('../partials/side') %>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>File vault</h1>
+        <p class="muted">Files live in Telegram storage. No public URL is ever created for them.</p>
+      </div>
+      <span class="pill">
+        <span class="dot" style="background:<%= telegramEnabled ? 'var(--ok)' : 'var(--danger)' %>"></span>
+        Bot <%= telegramEnabled ? 'online' : 'not configured' %>
+      </span>
+    </div>
+
+    <!-- ── connect ────────────────────────────────────────────────────── -->
+    <% if (!telegramEnabled) { %>
+      <div class="alert alert-warn mb-3">
+        <span class="alert-mark">⚠</span>
+        <div>
+          <strong>The media bot is not configured on this deployment.</strong>
+          <p class="small mt-1">
+            The operator needs to set <code class="mono">TELEGRAM_BOT_TOKEN</code> and
+            <code class="mono">TELEGRAM_BOT_USERNAME</code> in <code class="mono">.env</code>, then register the webhook
+            from Admin → System. Links with a plain destination URL work regardless.
+          </p>
+        </div>
+      </div>
+    <% } else if (!linked) { %>
+      <div class="card mb-3">
+        <div class="card-head"><span class="card-title">Connect your Telegram account</span></div>
+        <div class="grid g2 gap-4">
+          <div>
+            <p class="small">
+              Pairing links this dashboard to your Telegram chat so the bot knows which vault to file your uploads into.
+              The code below is valid for 15 minutes and can be used once.
+            </p>
+            <div class="copy mt-3">
+              <input readonly value="/start <%= pairCode %>">
+              <button type="button" class="btn btn-sm" data-copy="self">Copy</button>
+            </div>
+            <% if (botUsername) { %>
+              <a href="https://t.me/<%= botUsername %>?start=<%= pairCode %>" target="_blank" rel="noopener"
+                 class="btn btn-primary btn-block mt-3">Open @<%= botUsername %> and pair →</a>
+            <% } %>
+          </div>
+          <div class="stack gap-2">
+            <div class="upper">How it works</div>
+            <div class="flow-node" style="text-align:left"><strong>1. Pair</strong><span class="xs muted">Send the bot the command above.</span></div>
+            <div class="flow-node" style="text-align:left"><strong>2. Upload</strong><span class="xs muted">Send it any document, video, photo or audio file.</span></div>
+            <div class="flow-node" style="text-align:left"><strong>3. Attach</strong><span class="xs muted">The bot replies with a resource ID. Pick it when creating a link.</span></div>
+          </div>
+        </div>
+      </div>
+    <% } else { %>
+      <div class="alert alert-ok mb-3">
+        <span class="alert-mark">✓</span>
+        <div class="grow">
+          <strong>Telegram connected.</strong>
+          <p class="small mt-1">Send any file to <%= botUsername ? '@' + botUsername : 'the bot' %> to add it to your vault.</p>
+        </div>
+        <form method="post" action="/dashboard/files/unlink-telegram" data-confirm="Unlink Telegram from this account?">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button class="btn btn-xs btn-ghost">Unlink</button>
+        </form>
+      </div>
+    <% } %>
+
+    <!-- ── vault contents ─────────────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Stored files</span>
+        <span class="badge"><%= resources.filter(function(r){return r.status !== 'removed'}).length %> active</span>
+      </div>
+
+      <% const live = resources.filter(function (r) { return r.status !== 'removed'; }); %>
+      <% if (!live.length) { %>
+        <div class="empty">
+          <div class="empty-mark">▤</div>
+          Your vault is empty.
+          <p class="small mt-1">Send a file to the bot and it will appear here within seconds.</p>
+        </div>
+      <% } else { %>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>File</th><th>Type</th><th class="num">Size</th><th class="num">Links</th><th class="num">Downloads</th><th>Status</th><th>Added</th><th></th></tr>
+            </thead>
+            <tbody>
+              <% live.forEach(function (r) { %>
+                <tr>
+                  <td>
+                    <div class="row gap-2">
+                      <span class="file-icon" style="width:34px;height:34px;font-size:1rem">
+                        <%= r.kind === 'video' ? '▶' : r.kind === 'photo' ? '▣' : r.kind === 'audio' ? '♪' : '▤' %>
+                      </span>
+                      <div style="min-width:0">
+                        <div class="truncate" style="font-weight:600"><%= r.file_name %></div>
+                        <div class="code-chip">#<%= r.id %></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="small muted"><%= r.mime || r.kind %></td>
+                  <td class="num"><%= fmtBytes(r.size_bytes) %></td>
+                  <td class="num"><%= num(r.link_count) %></td>
+                  <td class="num"><%= num(r.downloads) %></td>
+                  <td>
+                    <span class="badge <%= r.status === 'ready' ? 'badge-ok' : 'badge-warn' %>"><%= r.status %></span>
+                  </td>
+                  <td class="small muted"><%= timeAgo(r.created_at) %></td>
+                  <td>
+                    <form method="post" action="/dashboard/files/<%= r.id %>/delete"
+                          data-confirm="Remove this file from your vault? Links pointing at it will stop delivering.">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <button class="btn btn-xs btn-danger">Remove</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card mt-3" style="background:var(--surface-2)">
+      <div class="upper mb-2">Why Telegram storage?</div>
+      <div class="grid g3">
+        <div><strong class="small">No public URL</strong><p class="xs mt-1">The file is addressed by a Telegram file_id, which is useless without the bot token.</p></div>
+        <div><strong class="small">Token-gated release</strong><p class="xs mt-1">The bot re-verifies the signed completion token before it sends a single byte.</p></div>
+        <div><strong class="small">No bandwidth bill</strong><p class="xs mt-1">Telegram serves the file. Your server only ever moves a token.</p></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<%- include('../partials/foot') %>

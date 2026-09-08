@@ -1,0 +1,175 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <div class="page-head">
+      <div><h1>System</h1><p class="muted">Runtime configuration, integrations and maintenance.</p></div>
+      <span class="pill"><span class="dot live"></span> Up <%= Math.floor(uptimeSec / 3600) %>h <%= Math.floor((uptimeSec % 3600) / 60) %>m</span>
+    </div>
+
+    <div class="grid g4 mb-3">
+      <div class="card card-tight"><div class="upper">Node</div><div style="font-size:1.1rem;font-weight:700;margin-top:4px"><%= nodeVersion %></div></div>
+      <div class="card card-tight"><div class="upper">Database</div><div style="font-size:1.1rem;font-weight:700;margin-top:4px"><%= fmtBytes(dbSize) %></div>
+        <div class="xs muted">SQLite (WAL)</div></div>
+      <div class="card card-tight"><div class="upper">Heap used</div><div style="font-size:1.1rem;font-weight:700;margin-top:4px"><%= fmtBytes(memory.heapUsed) %></div>
+        <div class="xs muted">RSS <%= fmtBytes(memory.rss) %></div></div>
+      <div class="card card-tight"><div class="upper">Environment</div>
+        <div style="font-size:1.1rem;font-weight:700;margin-top:4px"><%= sys.isProd ? 'production' : 'development' %></div></div>
+    </div>
+
+    <div class="grid g2 mb-3">
+      <!-- settings -->
+      <div class="card">
+        <div class="card-head"><span class="card-title">Platform settings</span></div>
+        <form method="post" action="/admin/system/settings" class="form-grid">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+          <div class="field">
+            <label class="label">Global skip mode</label>
+            <select class="select" name="skip_mode">
+              <% const cur = settings.skip_mode || sys.monetization.skipMode; %>
+              <option value="engagement" <%= cur === 'engagement' ? 'selected' : '' %>>engagement — skip unlocks after reading (AdSense-safe)</option>
+              <option value="ad_click" <%= cur === 'ad_click' ? 'selected' : '' %>>ad_click — skip unlocks on ad interaction</option>
+              <option value="none" <%= cur === 'none' ? 'selected' : '' %>>none — timer only</option>
+            </select>
+            <span class="hint">
+              <strong>ad_click rewards a visitor for clicking an ad.</strong> Google AdSense program policy prohibits
+              incentivised clicks; using it on AdSense inventory puts the account at risk. It is provided for
+              deployments running a network whose terms permit it.
+            </span>
+          </div>
+
+          <div class="field">
+            <label class="label">Revenue disclaimer</label>
+            <textarea class="textarea" name="revenue_disclaimer" maxlength="500" style="min-height:110px"><%= settings.revenue_disclaimer || '' %></textarea>
+            <span class="hint">Shown on the homepage, the payouts page and publisher dashboards.</span>
+          </div>
+
+          <div class="field">
+            <label class="label">Site-wide announcement</label>
+            <input class="input" name="announcement" maxlength="300" value="<%= settings.announcement || '' %>"
+                   placeholder="Leave blank to hide the banner">
+          </div>
+
+          <button class="btn btn-primary">Save settings</button>
+        </form>
+      </div>
+
+      <!-- integrations -->
+      <div class="stack gap-3">
+        <div class="card">
+          <div class="card-head"><span class="card-title">Telegram media bot</span></div>
+          <% if (!botInfo) { %>
+            <div class="alert alert-warn">
+              <span class="alert-mark">⚠</span>
+              <div class="small">
+                Not configured. Set <code class="mono">TELEGRAM_BOT_TOKEN</code>,
+                <code class="mono">TELEGRAM_BOT_USERNAME</code> and <code class="mono">TELEGRAM_STORAGE_CHAT_ID</code>
+                in <code class="mono">.env</code>, then restart.
+              </div>
+            </div>
+          <% } else if (botInfo.error) { %>
+            <div class="alert alert-danger">
+              <span class="alert-mark">⚠</span>
+              <div class="small">Telegram rejected the token: <code class="mono"><%= botInfo.error %></code></div>
+            </div>
+          <% } else { %>
+            <dl class="kv">
+              <dt>Bot</dt><dd>@<%= botInfo.username %></dd>
+              <dt>Name</dt><dd><%= botInfo.first_name %></dd>
+              <dt>Bot id</dt><dd class="mono"><%= botInfo.id %></dd>
+            </dl>
+            <form method="post" action="/admin/system/telegram/webhook" class="mt-3">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-block">Register webhook at <%= sys.baseUrl %>/webhooks/telegram</button>
+            </form>
+            <p class="xs muted mt-2">
+              Telegram requires a public HTTPS URL. On localhost, tunnel first (ngrok, cloudflared) and set
+              <code class="mono">BASE_URL</code> to the tunnel address.
+            </p>
+          <% } %>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="card-title">Runtime config</span></div>
+          <dl class="kv">
+            <dt>Base URL</dt><dd class="mono xs"><%= sys.baseUrl %></dd>
+            <dt>AdSense client</dt><dd class="mono xs"><%= sys.adsenseClient %></dd>
+            <dt>AdSense serving</dt><dd><span class="badge <%= sys.adsenseEnabled ? 'badge-ok' : 'badge-warn' %>"><%= sys.adsenseEnabled ? 'yes' : 'no' %></span></dd>
+            <dt>Default wait</dt><dd><%= sys.monetization.waitSeconds %>s</dd>
+            <dt>Min dwell</dt><dd><%= sys.monetization.minDwellMs %>ms</dd>
+            <dt>Completion TTL</dt><dd><%= sys.monetization.completionTokenTtlSec %>s</dd>
+            <dt>Hold window</dt><dd><%= sys.holdHours %>h</dd>
+            <dt>Min payout</dt><dd><%= usd(sys.minPayout) %></dd>
+            <dt>Fraud review at</dt><dd><%= sys.fraud.reviewScore %></dd>
+            <dt>Fraud reject at</dt><dd><%= sys.fraud.rejectScore %></dd>
+          </dl>
+          <p class="xs muted mt-2">These come from <code class="mono">.env</code> and need a restart to change.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g2 mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Storage</span></div>
+        <dl class="kv">
+          <dt>Visits</dt><dd><%= num(counts.visits) %></dd>
+          <dt>Visit steps</dt><dd><%= num(counts.steps) %></dd>
+          <dt>Impressions</dt><dd><%= num(counts.impressions) %></dd>
+          <dt>Ledger entries</dt><dd><%= num(counts.ledger) %></dd>
+          <dt>Live tokens</dt><dd><%= num(counts.tokens) %></dd>
+        </dl>
+        <div class="divider"></div>
+        <form method="post" action="/admin/system/vacuum"
+              data-confirm="Prune raw traffic older than 180 days and compact the database? Rolled-up daily stats and the ledger are kept.">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button class="btn btn-block">Prune old traffic &amp; compact</button>
+        </form>
+        <p class="xs muted mt-2">
+          Removes raw <code class="mono">visits</code>, <code class="mono">visit_steps</code> and
+          <code class="mono">impressions</code> older than 180 days. <code class="mono">daily_stats</code>,
+          <code class="mono">ledger</code> and <code class="mono">payouts</code> are never touched.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Deployment checklist</span></div>
+        <ul class="feature-list">
+          <li>Set <code class="mono">SESSION_SECRET</code>, <code class="mono">TOKEN_SECRET</code>, <code class="mono">HASH_SALT</code> — production refuses to boot without them</li>
+          <li>Set <code class="mono">BASE_URL</code> to your real https origin</li>
+          <li>Terminate TLS in front and set <code class="mono">TRUST_PROXY=1</code></li>
+          <li>Put Cloudflare in front so <code class="mono">CF-IPCountry</code> gives you real country data</li>
+          <li>Edit every policy page under Content → Policy pages</li>
+          <li>Publish real articles before applying to any ad network</li>
+          <li>Replace every rate-card row with figures from your own reporting</li>
+          <li>Back up <code class="mono">data/linkvault.db</code> on a schedule</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Audit log</span></div>
+      <% if (!audits.length) { %>
+        <div class="empty"><div class="empty-mark">▤</div>No admin actions recorded.</div>
+      <% } else { %>
+        <div class="table-wrap scroll-y">
+          <table>
+            <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Detail</th></tr></thead>
+            <tbody>
+              <% audits.forEach(function (a) { %>
+                <tr>
+                  <td class="small muted"><%= timeAgo(a.created_at) %></td>
+                  <td class="small"><%= a.email || 'system' %></td>
+                  <td><span class="badge"><%= a.action %></span></td>
+                  <td class="mono xs muted truncate" style="max-width:280px"><%= a.meta %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>

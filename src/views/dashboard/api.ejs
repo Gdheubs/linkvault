@@ -1,0 +1,148 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+
+<div class="app">
+  <%- include('../partials/side') %>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>Developer API</h1>
+        <p class="muted">Bearer-token REST for links, stats and your file vault.</p>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-head">
+        <span class="card-title">Your API key</span>
+        <form method="post" action="/dashboard/api/rotate"
+              data-confirm="Rotate your API key? Every existing integration stops working immediately.">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button class="btn btn-xs btn-danger">Rotate key</button>
+        </form>
+      </div>
+      <div class="copy">
+        <input readonly type="password" value="<%= apiKey %>" id="apiKeyField">
+        <button type="button" class="btn btn-sm" onclick="var f=document.getElementById('apiKeyField');f.type=f.type==='password'?'text':'password';this.textContent=f.type==='password'?'Show':'Hide'">Show</button>
+        <button type="button" class="btn btn-sm btn-primary" data-copy="<%= apiKey %>">Copy</button>
+      </div>
+      <p class="hint mt-2">
+        Send it as <code class="mono">Authorization: Bearer &lt;key&gt;</code>, or as an
+        <code class="mono">X-API-Key</code> header. Rate limit: 300 requests/minute.
+      </p>
+    </div>
+
+    <div class="grid g2 mb-3">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Quick start — shorten a URL</span></div>
+        <div class="prose"><pre><code>curl -H "Authorization: Bearer YOUR_KEY" \
+  "<%= baseUrl %>/api/v1/shorten?url=https://example.com/file.zip"</code></pre></div>
+        <p class="small muted">Returns <code class="mono">{"short_url":"...","code":"X8K29D","reused":false}</code>.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Promote a YouTube video</span></div>
+        <div class="prose"><pre><code>curl -X POST "<%= baseUrl %>/api/v1/ads/campaigns" \
+  -H "Authorization: Bearer YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"kind":"youtube","package":"spotlight",
+       "title":"My new video",
+       "youtube_id":"https://youtu.be/VIDEO_ID"}'</code></pre></div>
+        <p class="small muted">Then read delivery with <code class="mono">/api/v1/ads/campaigns/:id/stats</code>.</p>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-head">
+        <span class="card-title">Publisher endpoints</span>
+        <span class="badge">links, stats, vault</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+          <tbody>
+            <% const endpoints = [
+              ['GET','/api/v1/me','Account, balances, realised eCPM and referral link'],
+              ['GET','/api/v1/links','List your links. Query: limit, offset, status'],
+              ['POST','/api/v1/links','Create a link. Body: destination or resource_id, alias, title, description, campaign_id, expires_days, max_clicks'],
+              ['GET','/api/v1/links/:code','One link with country and device breakdowns. Query: days'],
+              ['PATCH','/api/v1/links/:code','Update title, description, destination or status'],
+              ['DELETE','/api/v1/links/:code','Delete a link'],
+              ['GET','/api/v1/stats','Summary, daily series, country and device splits. Query: days'],
+              ['GET','/api/v1/files','List your Telegram vault contents'],
+              ['GET','/api/v1/shorten','One-shot shortener. Query: url, title, force']
+            ] %>
+            <% endpoints.forEach(function (e) { %>
+              <tr>
+                <td><span class="badge <%= e[0] === 'GET' ? 'badge-info' : e[0] === 'DELETE' ? 'badge-danger' : 'badge-brand' %>"><%= e[0] %></span></td>
+                <td class="mono"><%= e[1] %></td>
+                <td class="small muted"><%= e[2] %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Advertiser endpoints</span>
+        <a href="/dashboard/ads" class="btn btn-xs btn-ghost">Ad campaigns →</a>
+      </div>
+      <p class="small mb-2">
+        Run and measure ad campaigns programmatically. Same key, same rate limit — a creator can publish links and
+        buy placements from one integration.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+          <tbody>
+            <% const adEndpoints = [
+              ['GET','/api/v1/ads/packages','Available packages with prices, terms and placements'],
+              ['GET','/api/v1/ads/account','Ad credit balance, campaign counts, lifetime delivery'],
+              ['GET','/api/v1/ads/stats','Delivery rolled up across all your campaigns. Query: days'],
+              ['POST','/api/v1/ads/campaigns','Create a campaign. Body: kind (youtube|blog|product|link), package, title, blurb, url, youtube_id, image, cta. Funds from credit automatically when available'],
+              ['GET','/api/v1/ads/campaigns','List your campaigns. Query: status, limit, offset'],
+              ['GET','/api/v1/ads/campaigns/:id','One campaign with its numbers'],
+              ['GET','/api/v1/ads/campaigns/:id/stats','Daily series plus country, device and surface breakdowns. Query: days'],
+              ['PATCH','/api/v1/ads/campaigns/:id','Edit the creative, or pause/resume. Editing a live creative returns it to review'],
+              ['POST','/api/v1/ads/campaigns/:id/fund','Fund an unfunded draft from your ad credit'],
+              ['DELETE','/api/v1/ads/campaigns/:id','Cancel. Refunded in full if it never went live']
+            ] %>
+            <% adEndpoints.forEach(function (e) { %>
+              <tr>
+                <td><span class="badge <%= e[0] === 'GET' ? 'badge-info' : e[0] === 'DELETE' ? 'badge-danger' : 'badge-brand' %>"><%= e[0] %></span></td>
+                <td class="mono"><%= e[1] %></td>
+                <td class="small muted"><%= e[2] %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="divider"></div>
+      <div class="upper mb-2">Campaign lifecycle</div>
+      <div class="prose"><pre><code>draft ──fund──> pending ──approved──> active ──term ends──> expired
+                   └──── rejected (credit refunded automatically)
+active <──── pause / resume ────> paused</code></pre></div>
+      <p class="xs muted">
+        You control funding, pausing and cancellation. Approval is a moderator decision — the API returns
+        <code class="mono">403 status_not_allowed</code> if you try to set it yourself.
+      </p>
+    </div>
+
+    <div class="card mt-3" style="background:var(--surface-2)">
+      <div class="upper mb-2">Errors</div>
+      <div class="grid g4">
+        <div><strong class="mono small">401</strong><p class="xs mt-1">invalid_api_key</p></div>
+        <div><strong class="mono small">404</strong><p class="xs mt-1">not_found</p></div>
+        <div><strong class="mono small">409</strong><p class="xs mt-1">alias_taken</p></div>
+        <div><strong class="mono small">429</strong><p class="xs mt-1">rate_limited — see <code>Retry-After</code></p></div>
+        <div><strong class="mono small">402</strong><p class="xs mt-1">insufficient_credit — includes <code>shortfall_usd</code></p></div>
+        <div><strong class="mono small">403</strong><p class="xs mt-1">status_not_allowed — approval is a moderator action</p></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<%- include('../partials/foot') %>

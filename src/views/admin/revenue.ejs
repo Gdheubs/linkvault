@@ -1,0 +1,143 @@
+<%- include('../partials/head', { noindex: true }) %>
+<%- include('../partials/nav') %>
+<div class="app">
+  <%- include('../partials/adminside') %>
+  <main class="main">
+    <div class="page-head">
+      <div><h1>Revenue</h1><p class="muted">Rate cards, revenue split, and platform liabilities.</p></div>
+      <div class="rangebar">
+        <% [7, 30, 90].forEach(function (d) { %>
+          <a href="?days=<%= d %>" class="<%= days === d ? 'on' : '' %>"><%= d %>d</a>
+        <% }); %>
+      </div>
+    </div>
+
+    <div class="grid g4 mb-3">
+      <div class="card stat">
+        <div class="stat-label">Gross revenue, <%= days %>d</div>
+        <div class="stat-value"><%= usd(summary.range.revenue_micros) %></div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Platform kept</div>
+        <div class="stat-value" style="color:var(--brand)"><%= usd(platformMicros) %></div>
+        <div class="stat-sub"><%= pct(platformMicros, summary.range.revenue_micros) %> of gross</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Owed (withdrawable)</div>
+        <div class="stat-value" style="color:var(--warn)"><%= usd(owed) %></div>
+        <div class="stat-sub"><%= usd(held) %> still on hold</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Paid out lifetime</div>
+        <div class="stat-value"><%= usd(paid) %></div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-head"><span class="card-title">Platform revenue over time</span></div>
+      <div class="chart-wrap" data-chart='<%- JSON.stringify({ type:"bar", x:"label", y:"revenue_micros", yLabel:"Gross revenue", format:"money", series }) %>'></div>
+    </div>
+
+    <div class="grid g-side mb-3">
+      <!-- rate cards -->
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <span class="card-title">Rate cards</span>
+            <p class="xs muted mt-1">Most specific match wins: country+device &gt; country &gt; device &gt; wildcard.</p>
+          </div>
+        </div>
+
+        <form method="post" action="/admin/revenue/rate" class="row gap-2 wrapf mb-3" style="align-items:flex-end">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field" style="width:88px"><label class="label">Country</label><input class="input" name="country" placeholder="US or *" maxlength="2"></div>
+          <div class="field" style="width:120px">
+            <label class="label">Device</label>
+            <select class="select" name="device">
+              <option value="*">Any</option><option value="desktop">desktop</option>
+              <option value="mobile">mobile</option><option value="tablet">tablet</option>
+            </select>
+          </div>
+          <div class="field" style="width:110px"><label class="label">CPM (USD)</label><input class="input" name="cpm" type="number" step="0.001" min="0" required></div>
+          <div class="field" style="width:100px"><label class="label">Fill (0-1)</label><input class="input" name="fill_rate" type="number" step="0.01" min="0" max="1" value="0.85"></div>
+          <div class="field grow" style="min-width:150px"><label class="label">Note</label><input class="input" name="note" maxlength="120"></div>
+          <button class="btn btn-primary">Save row</button>
+        </form>
+
+        <div class="table-wrap scroll-y">
+          <table>
+            <thead><tr><th>Country</th><th>Device</th><th class="num">CPM</th><th class="num">Fill</th><th class="num">Effective</th><th>Note</th><th></th></tr></thead>
+            <tbody>
+              <% rateCards.forEach(function (r) { %>
+                <tr>
+                  <td><%= r.country === '*' ? '🌐 Wildcard' : countryFlag(r.country) + ' ' + r.country %></td>
+                  <td><%= r.device %></td>
+                  <td class="num"><%= usd(r.cpm_micros, 3) %></td>
+                  <td class="num"><%= Math.round(r.fill_rate * 100) %>%</td>
+                  <td class="num" style="font-weight:600"><%= usd(Math.round(r.cpm_micros * r.fill_rate), 3) %></td>
+                  <td class="xs muted truncate" style="max-width:140px"><%= r.note || '—' %></td>
+                  <td>
+                    <form method="post" action="/admin/revenue/rate/<%= r.id %>/delete" data-confirm="Delete this rate row?">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <button class="btn btn-xs btn-danger">×</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- split + ops -->
+      <div class="stack gap-3">
+        <div class="card">
+          <div class="card-head"><span class="card-title">Revenue split</span></div>
+          <form method="post" action="/admin/revenue/shares" class="form-grid">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="field">
+              <label class="label">Publisher share (%)</label>
+              <input class="input" name="publisher_share_pct" type="number" step="0.1" min="0" max="95" value="<%= shares.publisher %>">
+            </div>
+            <div class="field">
+              <label class="label">Referral share (%)</label>
+              <input class="input" name="referral_share_pct" type="number" step="0.1" min="0" max="50" value="<%= shares.referral %>">
+              <span class="hint">Taken from the platform cut, not the publisher's.</span>
+            </div>
+            <div class="alert alert-info">
+              <span class="alert-mark">ℹ</span>
+              <div class="small">Platform keeps <strong><%= (100 - shares.publisher - shares.referral).toFixed(1) %>%</strong> after both shares.</div>
+            </div>
+            <button class="btn btn-primary">Save split</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="card-title">Operations</span></div>
+          <dl class="kv mb-2">
+            <dt>Hold window</dt><dd><%= holdHours %>h</dd>
+            <dt>Minimum payout</dt><dd><%= usd(minPayout) %></dd>
+          </dl>
+          <form method="post" action="/admin/revenue/release"
+                data-confirm="Release all matured pending earnings into withdrawable balances?">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button class="btn btn-block">Release matured earnings</button>
+          </form>
+          <p class="xs muted mt-2">
+            This runs automatically on a timer. Use the button to force a pass after a fraud sweep.
+          </p>
+        </div>
+
+        <div class="card" style="background:var(--surface-2)">
+          <div class="upper mb-2">Rate-card guidance</div>
+          <p class="xs">
+            Do not copy headline CPMs from competitor marketing. Short-link rates swing hard with country, device,
+            traffic source, ad network and fill. Start conservative, watch the realised eCPM on the publisher
+            dashboards, and raise the card only once your own network reporting supports it.
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>
